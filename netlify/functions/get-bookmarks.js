@@ -72,14 +72,20 @@ exports.handler = async function(event) {
             throw new Error(`${NEW_TAB_GROUP_NAME} group contains no collections`);
         }
 
+        if (!autocompleteGroup) {
+            throw new Error(`No group found called '${AUTOCOMPLETE_GROUP_NAME}'`);
+        }
+
+        if (!autocompleteGroup.collections || autocompleteGroup.collections.length === 0) {
+            throw new Error(`${AUTOCOMPLETE_GROUP_NAME} group contains no collections`);
+        }
+
         // Step 2: Fetch all collections to get their titles
         const collectionsMap = await fetchCollectionsMap(authHeaders);
 
         // Step 3: Fetch bookmarks for both groups
         const newTabFolders = await fetchBookmarksForGroup(newTabGroup, collectionsMap, authHeaders);
-        const autocompleteFolders = autocompleteGroup
-            ? await fetchBookmarksForGroup(autocompleteGroup, collectionsMap, authHeaders)
-            : [];
+        const autocompleteFolders = await fetchBookmarksForGroup(autocompleteGroup, collectionsMap, authHeaders);
 
         return createResponse(200, {
             display: newTabFolders,
