@@ -42,6 +42,7 @@ RAINDROP_CLIENT_ID=your_actual_client_id
 RAINDROP_CLIENT_SECRET=your_actual_client_secret
 RAINDROP_REDIRECT_URI=http://localhost:8888/.netlify/functions/auth-callback
 RAINDROP_GROUP_NAME=New Tab
+RAINDROP_AUTOCOMPLETE_GROUP_NAME=Autocomplete URLs
 ```
 
 ### 4. Local Development
@@ -78,6 +79,7 @@ npm run deploy
    - `RAINDROP_CLIENT_SECRET`
    - `RAINDROP_REDIRECT_URI` (use your Netlify URL)
    - `RAINDROP_GROUP_NAME` (e.g. `New Tab`)
+   - `RAINDROP_AUTOCOMPLETE_GROUP_NAME` (e.g. `Autocomplete URLs`)
 7. Deploy!
 
 ## Project Structure
