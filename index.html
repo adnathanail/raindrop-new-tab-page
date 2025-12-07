@@ -8,32 +8,39 @@
 </head>
 <body>
     <div class="container py-5">
-        <header class="text-center mb-5">
-            <h1 class="display-4 fw-semibold">New tab</h1>
-            <p class="lead opacity-75">Powered by <a href="http://raindrop.io">Raindrop.io</a></p>
-            <p class="lead opacity-75">Made with ❤️ by <a href="http://github.com/adnathanail/">Alex Nathanail</a></p>
-        </header>
+        <header class="mb-5">
+            <div class="row align-items-center g-3">
+                <!-- Left: Title (order-1 on mobile) -->
+                <div class="col-12 col-lg-3 order-1 order-lg-1 text-center text-lg-start">
+                    <h1 class="h3 mb-0">New tab</h1>
+                </div>
 
-        <!-- Search Bar -->
-        <div class="row justify-content-center mb-5">
-            <div class="col-12 col-md-8 col-lg-6">
-                <form id="searchForm">
-                    <div class="input-group input-group-lg">
-                        <span class="input-group-text"><i class="fa-brands fa-google"></i> / <i class="fa-solid fa-globe"></i></span>
-                        <input
-                            type="text"
-                            name="q"
-                            id="searchInput"
-                            class="form-control"
-                            placeholder="Search Google or go to URL..."
-                            autofocus
-                            autocomplete="off"
-                        >
-                        <button class="btn btn-primary" type="submit">Search/Go</button>
-                    </div>
-                </form>
+                <!-- Middle: Search (order-3 on mobile, order-2 on desktop) -->
+                <div class="col-12 col-lg-6 order-3 order-lg-2">
+                    <form id="searchForm">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa-brands fa-google"></i> / <i class="fa-solid fa-globe"></i></span>
+                            <input
+                                type="text"
+                                name="q"
+                                id="searchInput"
+                                class="form-control"
+                                placeholder="Search Google or go to URL..."
+                                autofocus
+                                autocomplete="off"
+                            >
+                            <button class="btn btn-primary" type="submit">Go</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right: Credits (order-2 on mobile, order-3 on desktop) -->
+                <div class="col-12 col-lg-3 order-2 order-lg-3 text-center text-lg-end">
+                    <small class="d-block opacity-75">Powered by <a href="http://raindrop.io">Raindrop.io</a></small>
+                    <small class="d-block opacity-75">Made with ❤️ by <a href="http://github.com/adnathanail/">Alex Nathanail</a></small>
+                </div>
             </div>
-        </div>
+        </header>
 
         <main id="main">
             <div id="loading" class="text-center fs-5 py-4">Loading your bookmarks...</div>
