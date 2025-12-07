@@ -1,18 +1,17 @@
 // Netlify Function to fetch bookmarks from Raindrop.io
 // Uses OAuth token from cookie for authentication
 
-function parseCookies(cookieHeader) {
-    const cookies = {};
-    if (cookieHeader) {
-        cookieHeader.split(';').forEach(cookie => {
-            const [name, value] = cookie.trim().split('=');
-            cookies[name] = value;
-        });
-    }
-    return cookies;
-}
+const {
+    getAccessToken,
+    createAuthHeaders,
+    createAuthErrorResponse,
+    createTokenExpiredResponse,
+    fetchUserData,
+    fetchCollectionsMap,
+    fetchBookmarksForGroup
+} = require('./lib/raindrop');
 
-exports.handler = async function(event, context) {
+exports.handler = async function(event) {
     // Only allow GET requests
     if (event.httpMethod !== 'GET') {
         return {
@@ -22,21 +21,11 @@ exports.handler = async function(event, context) {
     }
 
     // Extract access token from cookie
-    const cookies = parseCookies(event.headers.cookie);
-    const accessToken = cookies.raindrop_token;
+    const accessToken = getAccessToken(event);
 
     // Check if user is authenticated
     if (!accessToken) {
-        return {
-            statusCode: 401,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                error: 'Not authenticated',
-                needsAuth: true
-            })
-        };
+        return createAuthErrorResponse();
     }
 
     // Get name of group to display collections for
@@ -54,30 +43,19 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const authHeaders = {
-            'Authorization': `Bearer ${accessToken}`
-        };
+        const authHeaders = createAuthHeaders(accessToken);
 
         // Step 1: Fetch authenticated user to get groups
-        const userResponse = await fetch('https://api.raindrop.io/rest/v1/user', {
-            headers: authHeaders
-        });
-
-        if (!userResponse.ok) {
-            if (userResponse.status === 401) {
-                return {
-                    statusCode: 401,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        error: 'Token expired or invalid',
-                        needsAuth: true
-                    })
-                };
+        let userData;
+        try {
+            userData = await fetchUserData(authHeaders);
+        } catch (error) {
+            if (error.message === 'TOKEN_EXPIRED') {
+                return createTokenExpiredResponse();
             }
-            throw new Error(`Failed to fetch user: ${userResponse.statusText}`);
+            throw error;
         }
 
-        const userData = await userResponse.json();
         const newTabGroup = userData.user.groups?.find(g => g.title === GROUP_NAME);
 
         if (!newTabGroup) {
@@ -89,43 +67,10 @@ exports.handler = async function(event, context) {
         }
 
         // Step 2: Fetch all collections to get their titles
-        const collectionsResponse = await fetch('https://api.raindrop.io/rest/v1/collections', {
-            headers: authHeaders
-        });
-
-        if (!collectionsResponse.ok) {
-            throw new Error(`Failed to fetch collections: ${collectionsResponse.statusText}`);
-        }
-
-        const collectionsData = await collectionsResponse.json();
-        const collectionsMap = {};
-        collectionsData.items.forEach(c => {
-            collectionsMap[c._id] = c;
-        });
+        const collectionsMap = await fetchCollectionsMap(authHeaders);
 
         // Step 3: Fetch bookmarks for each collection in the group
-        const foldersWithBookmarks = [];
-
-        for (const collectionId of newTabGroup.collections) {
-            const collection = collectionsMap[collectionId];
-            if (!collection) continue;
-
-            const bookmarksResponse = await fetch(`https://api.raindrop.io/rest/v1/raindrops/${collectionId}`, {
-                headers: authHeaders
-            });
-
-            if (bookmarksResponse.ok) {
-                const bookmarksData = await bookmarksResponse.json();
-
-                if (bookmarksData.items && bookmarksData.items.length > 0) {
-                    foldersWithBookmarks.push({
-                        id: collectionId,
-                        title: collection.title,
-                        bookmarks: bookmarksData.items
-                    });
-                }
-            }
-        }
+        const foldersWithBookmarks = await fetchBookmarksForGroup(newTabGroup, collectionsMap, authHeaders);
 
         return {
             statusCode: 200,
