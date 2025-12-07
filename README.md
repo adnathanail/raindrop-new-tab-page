@@ -77,6 +77,7 @@ npm run deploy
    - `RAINDROP_CLIENT_ID`
    - `RAINDROP_CLIENT_SECRET`
    - `RAINDROP_REDIRECT_URI` (use your Netlify URL)
+   - `RAINDROP_GROUP_NAME` (e.g. `New Tab`)
 7. Deploy!
 
 ## Project Structure
@@ -101,10 +102,6 @@ To use this as your new tab page:
 1. Deploy to Netlify and get your URL
 2. Install a "Custom New Tab URL" extension for your browser
 3. Set the URL to your Netlify deployment
-
-## Customization
-
-The bookmarks are currently fetched from the unsorted collection (ID: 0). To fetch from a specific collection, edit `netlify/functions/get-bookmarks.js:26` and change the endpoint.
 
 ## License
 
