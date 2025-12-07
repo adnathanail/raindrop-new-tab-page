@@ -1,5 +1,10 @@
 // Main application logic
 
+// Autocomplete state
+let autocompleteData = [];
+let filteredSuggestions = [];
+let selectedIndex = -1;
+
 // Handle search form submission
 function setupSearch() {
     const searchForm = document.getElementById('searchForm');
@@ -10,6 +15,12 @@ function setupSearch() {
 
         const query = searchInput.value.trim();
         if (!query) return;
+
+        // If there's a selected autocomplete item, use it
+        if (selectedIndex >= 0 && selectedIndex < filteredSuggestions.length) {
+            navigateToSuggestion(filteredSuggestions[selectedIndex]);
+            return;
+        }
 
         // Check if input looks like a URL
         if (isURL(query)) {
@@ -25,6 +36,143 @@ function setupSearch() {
             window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
         }
     });
+
+    // Setup autocomplete
+    setupAutocomplete();
+}
+
+function navigateToSuggestion(suggestion) {
+    let url = suggestion.link;
+    if (!url.match(/^https?:\/\//i)) {
+        url = `https://${url}`;
+    }
+    window.location.href = url;
+}
+
+function setupAutocomplete() {
+    const searchInput = document.getElementById('searchInput');
+    const dropdown = document.getElementById('autocompleteDropdown');
+
+    // Fetch autocomplete data
+    fetchAutocompleteData();
+
+    // Handle input changes
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim().toLowerCase();
+
+        if (query.length === 0) {
+            hideAutocomplete();
+            return;
+        }
+
+        // Filter suggestions
+        filteredSuggestions = [];
+        autocompleteData.forEach(folder => {
+            folder.bookmarks.forEach(bookmark => {
+                const titleMatch = bookmark.title.toLowerCase().includes(query);
+                const linkMatch = bookmark.link.toLowerCase().includes(query);
+
+                if (titleMatch || linkMatch) {
+                    filteredSuggestions.push({
+                        ...bookmark,
+                        folderTitle: folder.title
+                    });
+                }
+            });
+        });
+
+        if (filteredSuggestions.length > 0) {
+            showAutocomplete(filteredSuggestions);
+            selectedIndex = 0; // Select first item by default
+        } else {
+            hideAutocomplete();
+        }
+    });
+
+    // Handle keyboard navigation
+    searchInput.addEventListener('keydown', function(e) {
+        if (!dropdown.classList.contains('d-none')) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, filteredSuggestions.length - 1);
+                updateSelectedItem();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                updateSelectedItem();
+            } else if (e.key === 'Escape') {
+                hideAutocomplete();
+            }
+        }
+    });
+
+    // Click outside to close
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            hideAutocomplete();
+        }
+    });
+}
+
+function showAutocomplete(suggestions) {
+    const dropdown = document.getElementById('autocompleteDropdown');
+    dropdown.innerHTML = '';
+
+    suggestions.forEach((suggestion, index) => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        if (index === selectedIndex) {
+            item.classList.add('active');
+        }
+
+        item.innerHTML = `
+            <div class="autocomplete-folder">${suggestion.folderTitle}</div>
+            <div class="autocomplete-item-title">${suggestion.title}</div>
+            <div class="autocomplete-item-url">${suggestion.link}</div>
+        `;
+
+        item.addEventListener('click', () => {
+            navigateToSuggestion(suggestion);
+        });
+
+        dropdown.appendChild(item);
+    });
+
+    dropdown.classList.remove('d-none');
+}
+
+function hideAutocomplete() {
+    const dropdown = document.getElementById('autocompleteDropdown');
+    dropdown.classList.add('d-none');
+    selectedIndex = -1;
+}
+
+function updateSelectedItem() {
+    const dropdown = document.getElementById('autocompleteDropdown');
+    const items = dropdown.querySelectorAll('.autocomplete-item');
+
+    items.forEach((item, index) => {
+        if (index === selectedIndex) {
+            item.classList.add('active');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+
+async function fetchAutocompleteData() {
+    try {
+        const response = await fetch('/.netlify/functions/get-autocomplete');
+
+        if (response.ok) {
+            const data = await response.json();
+            autocompleteData = data.folders || [];
+        }
+    } catch (error) {
+        console.error('Error fetching autocomplete data:', error);
+        // Silently fail - autocomplete just won't work
+    }
 }
 
 // Check if string looks like a URL
@@ -115,7 +263,6 @@ function renderFolders(folders) {
         bookmarksEl.appendChild(clone);
 
         // Render bookmarks in this folder
-        console.log(bookmarksEl.querySelector("div:last-child"))
         renderBookmarksInFolder(folder.bookmarks, bookmarksEl.querySelector('[data-field="bookmarks"]:last-child'));
     });
 }
