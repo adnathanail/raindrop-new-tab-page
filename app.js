@@ -82,8 +82,8 @@ function setupAutocomplete() {
         });
 
         if (filteredSuggestions.length > 0) {
-            showAutocomplete(filteredSuggestions);
             selectedIndex = 0; // Select first item by default
+            showAutocomplete(filteredSuggestions);
         } else {
             hideAutocomplete();
         }
