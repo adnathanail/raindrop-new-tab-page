@@ -112,10 +112,12 @@
 
     <template id="autocomplete-item-template">
         <li>
-            <a href="#" class="dropdown-item">
+            <a href="#" class="dropdown-item d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="autocomplete-item-title" data-field="title"></div>
+                    <div class="autocomplete-item-url text-muted" data-field="url"></div>
+                </div>
                 <div class="autocomplete-folder text-muted" data-field="folder"></div>
-                <div class="autocomplete-item-title" data-field="title"></div>
-                <div class="autocomplete-item-url text-muted" data-field="url"></div>
             </a>
         </li>
     </template>
