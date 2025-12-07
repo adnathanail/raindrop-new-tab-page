@@ -100,6 +100,12 @@ function setupAutocomplete() {
                 e.preventDefault();
                 selectedIndex = Math.max(selectedIndex - 1, 0);
                 updateSelectedItem();
+            } else if (e.key === 'Enter') {
+                // If there's a selected autocomplete item, navigate to it
+                if (selectedIndex >= 0 && selectedIndex < filteredSuggestions.length) {
+                    e.preventDefault();
+                    navigateToSuggestion(filteredSuggestions[selectedIndex]);
+                }
             } else if (e.key === 'Escape') {
                 hideAutocomplete();
             }
