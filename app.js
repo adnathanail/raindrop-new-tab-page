@@ -89,6 +89,14 @@ function setupAutocomplete() {
         }
     });
 
+    // Handle focus - reopen autocomplete if there are suggestions
+    searchInput.addEventListener('focus', function(e) {
+        const query = e.target.value.trim();
+        if (query.length > 0 && filteredSuggestions.length > 0) {
+            showAutocomplete(filteredSuggestions);
+        }
+    });
+
     // Handle keyboard navigation
     searchInput.addEventListener('keydown', function(e) {
         if (dropdown.classList.contains('show')) {
