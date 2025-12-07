@@ -44,17 +44,11 @@ function showLoginPrompt() {
 
     loadingEl.classList.add('d-none');
 
-    bookmarksEl.innerHTML = `
-        <div class="col-12">
-            <div class="text-center text-white py-5">
-                <h2 class="mb-3">Welcome!</h2>
-                <p class="mb-4 opacity-75">Sign in with Raindrop.io to see your bookmarks</p>
-                <button id="loginBtn" class="btn btn-light btn-lg px-4">
-                    Sign in with Raindrop.io
-                </button>
-            </div>
-        </div>
-    `;
+    const template = document.getElementById('login-template');
+    const clone = template.content.cloneNode(true);
+
+    bookmarksEl.innerHTML = '';
+    bookmarksEl.appendChild(clone);
 
     document.getElementById('loginBtn').addEventListener('click', () => {
         window.location.href = '/.netlify/functions/auth-start';
@@ -63,29 +57,41 @@ function showLoginPrompt() {
 
 function renderBookmarks(bookmarks) {
     const bookmarksEl = document.getElementById('bookmarks');
+    bookmarksEl.innerHTML = '';
 
     if (bookmarks.length === 0) {
-        bookmarksEl.innerHTML = '<div class="col-12"><p class="text-white text-center">No bookmarks found.</p></div>';
+        const emptyTemplate = document.getElementById('empty-template');
+        bookmarksEl.appendChild(emptyTemplate.content.cloneNode(true));
         return;
     }
 
-    bookmarksEl.innerHTML = bookmarks.map(bookmark => `
-        <div class="col">
-            <a href="${bookmark.link}" class="card h-100 text-decoration-none" target="_blank" rel="noopener noreferrer">
-                <div class="card-body">
-                    <h5 class="card-title">${escapeHtml(bookmark.title)}</h5>
-                    ${bookmark.excerpt ? `<p class="card-text text-muted small">${escapeHtml(bookmark.excerpt)}</p>` : ''}
-                    <p class="card-text"><small class="text-muted">${extractDomain(bookmark.link)}</small></p>
-                </div>
-            </a>
-        </div>
-    `).join('');
-}
+    const template = document.getElementById('bookmark-template');
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    bookmarks.forEach(bookmark => {
+        const clone = template.content.cloneNode(true);
+
+        // Set the link
+        const link = clone.querySelector('a');
+        link.href = bookmark.link;
+
+        // Set the title
+        const title = clone.querySelector('[data-field="title"]');
+        title.textContent = bookmark.title;
+
+        // Set the excerpt (hide if empty)
+        const excerpt = clone.querySelector('[data-field="excerpt"]');
+        if (bookmark.excerpt) {
+            excerpt.textContent = bookmark.excerpt;
+        } else {
+            excerpt.remove();
+        }
+
+        // Set the domain
+        const domain = clone.querySelector('[data-field="domain"]');
+        domain.textContent = extractDomain(bookmark.link);
+
+        bookmarksEl.appendChild(clone);
+    });
 }
 
 function extractDomain(url) {
