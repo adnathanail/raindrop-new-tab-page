@@ -7,6 +7,10 @@
   # Functions directory
   functions = "netlify/functions"
 
+[functions]
+  # Include templates directory with functions
+  included_files = ["netlify/functions/templates/**"]
+
 # Redirect rules (optional, for cleaner URLs)
 [[redirects]]
   from = "/api/*"
