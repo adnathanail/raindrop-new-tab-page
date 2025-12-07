@@ -122,30 +122,32 @@ function setupAutocomplete() {
 
 function showAutocomplete(suggestions) {
     const dropdown = document.getElementById('autocompleteDropdown');
+    const template = document.getElementById('autocomplete-item-template');
     dropdown.innerHTML = '';
 
     suggestions.forEach((suggestion, index) => {
-        const item = document.createElement('li');
-        const link = document.createElement('a');
-        link.className = 'dropdown-item';
-        link.href = '#';
+        const clone = template.content.cloneNode(true);
+
+        // Set the fields
+        const link = clone.querySelector('a');
+        const folderEl = clone.querySelector('[data-field="folder"]');
+        const titleEl = clone.querySelector('[data-field="title"]');
+        const urlEl = clone.querySelector('[data-field="url"]');
+
+        folderEl.textContent = suggestion.folderTitle;
+        titleEl.textContent = suggestion.title;
+        urlEl.textContent = suggestion.link;
+
         if (index === selectedIndex) {
             link.classList.add('active');
         }
-
-        link.innerHTML = `
-            <div class="autocomplete-folder text-muted">${suggestion.folderTitle}</div>
-            <div class="autocomplete-item-title">${suggestion.title}</div>
-            <div class="autocomplete-item-url text-muted">${suggestion.link}</div>
-        `;
 
         link.addEventListener('click', (e) => {
             e.preventDefault();
             navigateToSuggestion(suggestion);
         });
 
-        item.appendChild(link);
-        dropdown.appendChild(item);
+        dropdown.appendChild(clone);
     });
 
     dropdown.classList.add('show');
