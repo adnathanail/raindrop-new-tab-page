@@ -41,6 +41,7 @@ Edit `.env` and add your OAuth credentials:
 RAINDROP_CLIENT_ID=your_actual_client_id
 RAINDROP_CLIENT_SECRET=your_actual_client_secret
 RAINDROP_REDIRECT_URI=http://localhost:8888/.netlify/functions/auth-callback
+RAINDROP_GROUP_NAME=New Tab
 ```
 
 ### 4. Local Development

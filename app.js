@@ -26,8 +26,8 @@ async function fetchBookmarks() {
         // Hide loading
         loadingEl.classList.add('d-none');
 
-        // Display bookmarks
-        renderBookmarks(data.items || []);
+        // Display folders with bookmarks
+        renderFolders(data.folders || []);
 
     } catch (error) {
         console.error('Error fetching bookmarks:', error);
@@ -49,15 +49,30 @@ function showLoginPrompt() {
     });
 }
 
-function renderBookmarks(bookmarks) {
+function renderFolders(folders) {
     const bookmarksEl = document.getElementById('bookmarks');
+    bookmarksEl.innerHTML = '';
 
-    if (bookmarks.length === 0) {
+    if (folders.length === 0) {
         return;
     }
 
-    bookmarksEl.innerHTML = '';
+    folders.forEach(folder => {
+        const template = document.getElementById('folder-template');
+        const clone = template.content.cloneNode(true);
 
+        // Set the title
+        const title = clone.querySelector('[data-field="folder-title"]');;
+        title.textContent = folder.title;
+        bookmarksEl.appendChild(clone);
+
+        // Render bookmarks in this folder
+        console.log(bookmarksEl.querySelector("div:last-child"))
+        renderBookmarksInFolder(folder.bookmarks, bookmarksEl.querySelector('[data-field="bookmarks"]:last-child'));
+    });
+}
+
+function renderBookmarksInFolder(bookmarks, container) {
     const template = document.getElementById('bookmark-template');
 
     bookmarks.forEach(bookmark => {
@@ -71,19 +86,11 @@ function renderBookmarks(bookmarks) {
         const title = clone.querySelector('[data-field="title"]');
         title.textContent = bookmark.title;
 
-        // Set the excerpt (hide if empty)
-        const excerpt = clone.querySelector('[data-field="excerpt"]');
-        if (bookmark.excerpt) {
-            excerpt.textContent = bookmark.excerpt;
-        } else {
-            excerpt.remove();
-        }
-
         // Set the domain
         const domain = clone.querySelector('[data-field="domain"]');
         domain.textContent = extractDomain(bookmark.link);
 
-        bookmarksEl.appendChild(clone);
+        container.appendChild(clone);
     });
 }
 

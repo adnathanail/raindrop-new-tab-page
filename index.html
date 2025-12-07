@@ -25,7 +25,7 @@
                 </div>
             </div>
             <div id="error" class="alert alert-danger d-none"></div>
-            <div id="bookmarks" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+            <div id="bookmarks" class="row">
                 <div class="col-12">
                     <p class="text-center">No bookmarks found.</p>
                 </div>
@@ -34,12 +34,20 @@
     </div>
 
     <!-- Templates -->
+    <template id="folder-template">
+        <div class="col-12">
+            <h3 data-field="folder-title"></h3>
+        </div>
+        <div data-field="bookmarks" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">
+
+        </div>
+    </template>
+
     <template id="bookmark-template">
-        <div class="col">
+        <div class="col mb-2">
             <a href="" class="card h-100 text-decoration-none" target="_blank" rel="noopener noreferrer">
                 <div class="card-body">
                     <h5 class="card-title" data-field="title"></h5>
-                    <p class="card-text text-muted small" data-field="excerpt"></p>
                     <p class="card-text"><small class="text-muted" data-field="domain"></small></p>
                 </div>
             </a>
