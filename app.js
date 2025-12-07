@@ -71,7 +71,7 @@ function renderBookmarks(bookmarks) {
 
     bookmarksEl.innerHTML = bookmarks.map(bookmark => `
         <div class="col">
-            <a href="${bookmark.link}" class="card h-100 text-decoration-none bookmark-card" target="_blank" rel="noopener noreferrer">
+            <a href="${bookmark.link}" class="card h-100 text-decoration-none" target="_blank" rel="noopener noreferrer">
                 <div class="card-body">
                     <h5 class="card-title">${escapeHtml(bookmark.title)}</h5>
                     ${bookmark.excerpt ? `<p class="card-text text-muted small">${escapeHtml(bookmark.excerpt)}</p>` : ''}

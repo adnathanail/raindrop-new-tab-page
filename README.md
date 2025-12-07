@@ -83,7 +83,6 @@ npm run deploy
 ```
 .
 ├── index.html              # Main HTML page
-├── styles.css              # Styling
 ├── app.js                  # Frontend JavaScript
 ├── netlify/
 │   └── functions/
