@@ -25,16 +25,16 @@ async function fetchBookmarks() {
         const data = await response.json();
 
         // Hide loading
-        loadingEl.classList.add('hidden');
+        loadingEl.classList.add('d-none');
 
         // Display bookmarks
         renderBookmarks(data.items || []);
 
     } catch (error) {
         console.error('Error fetching bookmarks:', error);
-        loadingEl.classList.add('hidden');
+        loadingEl.classList.add('d-none');
         errorEl.textContent = `Error: ${error.message}`;
-        errorEl.classList.remove('hidden');
+        errorEl.classList.remove('d-none');
     }
 }
 
@@ -42,25 +42,17 @@ function showLoginPrompt() {
     const loadingEl = document.getElementById('loading');
     const bookmarksEl = document.getElementById('bookmarks');
 
-    loadingEl.classList.add('hidden');
+    loadingEl.classList.add('d-none');
 
     bookmarksEl.innerHTML = `
-        <div style="text-align: center; color: white; padding: 3rem;">
-            <h2 style="margin-bottom: 1rem;">Welcome!</h2>
-            <p style="margin-bottom: 2rem; opacity: 0.9;">Sign in with Raindrop.io to see your bookmarks</p>
-            <button id="loginBtn" style="
-                background: white;
-                color: #667eea;
-                border: none;
-                padding: 1rem 2rem;
-                font-size: 1rem;
-                font-weight: 600;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: transform 0.2s;
-            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                Sign in with Raindrop.io
-            </button>
+        <div class="col-12">
+            <div class="text-center text-white py-5">
+                <h2 class="mb-3">Welcome!</h2>
+                <p class="mb-4 opacity-75">Sign in with Raindrop.io to see your bookmarks</p>
+                <button id="loginBtn" class="btn btn-light btn-lg px-4">
+                    Sign in with Raindrop.io
+                </button>
+            </div>
         </div>
     `;
 
@@ -73,16 +65,20 @@ function renderBookmarks(bookmarks) {
     const bookmarksEl = document.getElementById('bookmarks');
 
     if (bookmarks.length === 0) {
-        bookmarksEl.innerHTML = '<p style="color: white; text-align: center;">No bookmarks found.</p>';
+        bookmarksEl.innerHTML = '<div class="col-12"><p class="text-white text-center">No bookmarks found.</p></div>';
         return;
     }
 
     bookmarksEl.innerHTML = bookmarks.map(bookmark => `
-        <a href="${bookmark.link}" class="bookmark-card" target="_blank" rel="noopener noreferrer">
-            <div class="bookmark-title">${escapeHtml(bookmark.title)}</div>
-            ${bookmark.excerpt ? `<div class="bookmark-description">${escapeHtml(bookmark.excerpt)}</div>` : ''}
-            <div class="bookmark-domain">${extractDomain(bookmark.link)}</div>
-        </a>
+        <div class="col">
+            <a href="${bookmark.link}" class="card h-100 text-decoration-none bookmark-card" target="_blank" rel="noopener noreferrer">
+                <div class="card-body">
+                    <h5 class="card-title">${escapeHtml(bookmark.title)}</h5>
+                    ${bookmark.excerpt ? `<p class="card-text text-muted small">${escapeHtml(bookmark.excerpt)}</p>` : ''}
+                    <p class="card-text"><small class="text-muted">${extractDomain(bookmark.link)}</small></p>
+                </div>
+            </a>
+        </div>
     `).join('');
 }
 
