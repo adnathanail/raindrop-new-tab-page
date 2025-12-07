@@ -1,5 +1,51 @@
 // Main application logic
 
+// Handle search form submission
+function setupSearch() {
+    const searchForm = document.getElementById('searchForm');
+    const searchInput = document.getElementById('searchInput');
+
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const query = searchInput.value.trim();
+        if (!query) return;
+
+        // Check if input looks like a URL
+        if (isURL(query)) {
+            // Redirect to the URL
+            let url = query;
+            // Add protocol if missing
+            if (!url.match(/^https?:\/\//i)) {
+                url = 'https://' + url;
+            }
+            window.location.href = url;
+        } else {
+            // Search Google
+            window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        }
+    });
+}
+
+// Check if string looks like a URL
+function isURL(str) {
+    // Check for common URL patterns
+    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+    const domainPattern = /^[\da-z\.-]+\.[a-z\.]{2,6}$/i;
+
+    // Check if it starts with http:// or https://
+    if (str.match(/^https?:\/\//i)) {
+        return true;
+    }
+
+    // Check if it looks like a domain (contains a dot and valid TLD)
+    if (str.includes('.') && domainPattern.test(str)) {
+        return true;
+    }
+
+    return false;
+}
+
 async function fetchBookmarks() {
     const loadingEl = document.getElementById('loading');
     const errorEl = document.getElementById('error');
@@ -105,7 +151,11 @@ function extractDomain(url) {
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fetchBookmarks);
+    document.addEventListener('DOMContentLoaded', () => {
+        setupSearch();
+        fetchBookmarks();
+    });
 } else {
+    setupSearch();
     fetchBookmarks();
 }
