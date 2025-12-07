@@ -29,21 +29,21 @@ function setupSearch() {
 
 // Check if string looks like a URL
 function isURL(str) {
-    // Check for common URL patterns
-    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
-    const domainPattern = /^[\da-z\.-]+\.[a-z\.]{2,6}$/i;
-
     // Check if it starts with http:// or https://
     if (str.match(/^https?:\/\//i)) {
         return true;
     }
 
-    // Check if it looks like a domain (contains a dot and valid TLD)
-    if (str.includes('.') && domainPattern.test(str)) {
-        return true;
+    // Check if it looks like a domain with optional path/port
+    // Must contain a dot, and match domain pattern with optional path
+    if (!str.includes('.')) {
+        return false;
     }
 
-    return false;
+    // Match domain.tld or domain.tld/path or domain.tld:port
+    const domainWithPathPattern = /^[\da-z\.-]+\.[a-z]{2,}(:\d+)?(\/.*)?$/i;
+
+    return domainWithPathPattern.test(str);
 }
 
 async function fetchBookmarks() {
