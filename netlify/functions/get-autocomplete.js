@@ -4,6 +4,7 @@
 const {
     getAccessToken,
     createAuthHeaders,
+    createResponse,
     createAuthErrorResponse,
     createTokenExpiredResponse,
     fetchUserData,
@@ -14,10 +15,7 @@ const {
 exports.handler = async function(event) {
     // Only allow GET requests
     if (event.httpMethod !== 'GET') {
-        return {
-            statusCode: 405,
-            body: JSON.stringify({ error: 'Method not allowed' })
-        };
+        return createResponse(405, { error: 'Method not allowed' });
     }
 
     // Extract access token from cookie
@@ -32,14 +30,10 @@ exports.handler = async function(event) {
     const AUTOCOMPLETE_GROUP_NAME = process.env.RAINDROP_AUTOCOMPLETE_GROUP_NAME;
 
     if (!AUTOCOMPLETE_GROUP_NAME) {
-        return {
-            statusCode: 500,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                error: 'RAINDROP_AUTOCOMPLETE_GROUP_NAME not set',
-                needsAuth: true
-            })
-        };
+        return createResponse(500, {
+            error: 'RAINDROP_AUTOCOMPLETE_GROUP_NAME not set',
+            needsAuth: true
+        });
     }
 
     try {
@@ -60,14 +54,7 @@ exports.handler = async function(event) {
 
         if (!autocompleteGroup || !autocompleteGroup.collections || autocompleteGroup.collections.length === 0) {
             // Return empty results if group doesn't exist or has no collections
-            return {
-                statusCode: 200,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cache-Control': 'private, max-age=300'
-                },
-                body: JSON.stringify({ folders: [] })
-            };
+            return createResponse(200, { folders: [] }, { 'Cache-Control': 'private, max-age=300' });
         }
 
         // Step 2: Fetch all collections to get their titles
@@ -76,23 +63,13 @@ exports.handler = async function(event) {
         // Step 3: Fetch bookmarks for each collection in the group
         const foldersWithBookmarks = await fetchBookmarksForGroup(autocompleteGroup, collectionsMap, authHeaders);
 
-        return {
-            statusCode: 200,
-            headers: {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'private, max-age=300'
-            },
-            body: JSON.stringify({ folders: foldersWithBookmarks })
-        };
+        return createResponse(200, { folders: foldersWithBookmarks }, { 'Cache-Control': 'private, max-age=300' });
 
     } catch (error) {
         console.error('Error fetching autocomplete data:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: 'Failed to fetch autocomplete data',
-                message: error.message
-            })
-        };
+        return createResponse(500, {
+            error: 'Failed to fetch autocomplete data',
+            message: error.message
+        });
     }
 };

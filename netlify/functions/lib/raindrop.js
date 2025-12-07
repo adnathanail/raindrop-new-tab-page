@@ -22,26 +22,29 @@ function createAuthHeaders(accessToken) {
     };
 }
 
-function createAuthErrorResponse() {
+function createResponse(statusCode, body, additionalHeaders = {}) {
     return {
-        statusCode: 401,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            error: 'Not authenticated',
-            needsAuth: true
-        })
+        statusCode,
+        headers: {
+            'Content-Type': 'application/json',
+            ...additionalHeaders
+        },
+        body: JSON.stringify(body)
     };
 }
 
+function createAuthErrorResponse() {
+    return createResponse(401, {
+        error: 'Not authenticated',
+        needsAuth: true
+    });
+}
+
 function createTokenExpiredResponse() {
-    return {
-        statusCode: 401,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            error: 'Token expired or invalid',
-            needsAuth: true
-        })
-    };
+    return createResponse(401, {
+        error: 'Token expired or invalid',
+        needsAuth: true
+    });
 }
 
 async function fetchUserData(authHeaders) {
@@ -108,6 +111,7 @@ module.exports = {
     parseCookies,
     getAccessToken,
     createAuthHeaders,
+    createResponse,
     createAuthErrorResponse,
     createTokenExpiredResponse,
     fetchUserData,
