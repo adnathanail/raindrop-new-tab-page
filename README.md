@@ -1,6 +1,6 @@
 # Raindrop New Tab Page
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://github.com/adnathanail/raindrop-new-tab-page)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/adnathanail/raindrop-new-tab-page)
 
 A clean, minimal new tab page for your browser that displays your bookmarks from Raindrop.io.
 
