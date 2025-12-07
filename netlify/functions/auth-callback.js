@@ -1,4 +1,5 @@
 // Handles OAuth callback from Raindrop.io and exchanges code for access token
+const { renderTemplate } = require('./lib/templates');
 
 exports.handler = async function(event, context) {
     const CLIENT_ID = process.env.RAINDROP_CLIENT_ID;
@@ -16,42 +17,34 @@ exports.handler = async function(event, context) {
     });
 
     if (!code) {
+        const html = renderTemplate('error', {
+            TITLE: 'Error',
+            HEADING: 'Missing Authorization Code',
+            CONTENT: `<p>Query params: ${JSON.stringify(event.queryStringParameters)}</p>`
+        });
+
         return {
             statusCode: 400,
             headers: {
                 'Content-Type': 'text/html'
             },
-            body: `
-                <!DOCTYPE html>
-                <html>
-                <head><title>Error</title></head>
-                <body>
-                    <h1>Missing authorization code</h1>
-                    <p>Query params: ${JSON.stringify(event.queryStringParameters)}</p>
-                    <a href="/">Return to home</a>
-                </body>
-                </html>
-            `
+            body: html
         };
     }
 
     if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+        const html = renderTemplate('error', {
+            TITLE: 'Configuration Error',
+            HEADING: 'OAuth Not Configured Properly',
+            CONTENT: '<p>Check environment variables</p>'
+        });
+
         return {
             statusCode: 500,
             headers: {
                 'Content-Type': 'text/html'
             },
-            body: `
-                <!DOCTYPE html>
-                <html>
-                <head><title>Configuration Error</title></head>
-                <body>
-                    <h1>OAuth not configured properly</h1>
-                    <p>Check environment variables</p>
-                    <a href="/">Return to home</a>
-                </body>
-                </html>
-            `
+            body: html
         };
     }
 
@@ -87,8 +80,12 @@ exports.handler = async function(event, context) {
         // Store the access token in a secure HTTP-only cookie
         const cookieValue = `raindrop_token=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`; // 30 days
 
-        // Redirect back to the home page using HTML redirect
-        // This ensures the cookie is set properly in local development
+        const html = renderTemplate('redirect', {
+            REDIRECT_URL: '/',
+            TITLE: 'Authentication Successful',
+            MESSAGE: 'Authentication successful! Redirecting...'
+        });
+
         return {
             statusCode: 200,
             headers: {
@@ -96,39 +93,24 @@ exports.handler = async function(event, context) {
                 'Set-Cookie': cookieValue,
                 'Cache-Control': 'no-cache'
             },
-            body: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta http-equiv="refresh" content="0;url=/">
-                    <title>Authentication Successful</title>
-                </head>
-                <body>
-                    <p>Authentication successful! Redirecting...</p>
-                    <script>window.location.href = "/";</script>
-                </body>
-                </html>
-            `
+            body: html
         };
 
     } catch (error) {
         console.error('OAuth callback error:', error);
+
+        const html = renderTemplate('error', {
+            TITLE: 'Authentication Error',
+            HEADING: 'Authentication Failed',
+            CONTENT: `<p>${error.message}</p>`
+        });
+
         return {
             statusCode: 500,
             headers: {
                 'Content-Type': 'text/html'
             },
-            body: `
-                <!DOCTYPE html>
-                <html>
-                <head><title>Authentication Error</title></head>
-                <body>
-                    <h1>Authentication Failed</h1>
-                    <p>${error.message}</p>
-                    <a href="/">Return to home</a>
-                </body>
-                </html>
-            `
+            body: html
         };
     }
 };
