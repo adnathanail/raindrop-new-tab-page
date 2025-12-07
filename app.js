@@ -40,15 +40,10 @@ async function fetchBookmarks() {
 
 function showLoginPrompt() {
     const loadingEl = document.getElementById('loading');
-    const mainEl = document.getElementById('main');
+    const loginEl = document.getElementById('login');
 
     loadingEl.classList.add('d-none');
-
-    const template = document.getElementById('login-template');
-    const clone = template.content.cloneNode(true);
-
-    mainEl.innerHTML = '';
-    mainEl.appendChild(clone);
+    loginEl.classList.remove('d-none');
 
     document.getElementById('loginBtn').addEventListener('click', () => {
         window.location.href = '/.netlify/functions/auth-start';

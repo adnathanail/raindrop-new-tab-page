@@ -15,22 +15,19 @@
         </header>
 
         <main id="main">
-            <div id="loading" class="text-center text-white fs-5 py-4">Loading your bookmarks...</div>
+            <div id="loading" class="text-center fs-5 py-4">Loading your bookmarks...</div>
+            <div class="col-12 d-none" id="login">
+                <div class="text-center py-5">
+                    <p class="mb-4 opacity-75">Sign in with Raindrop.io to see your bookmarks</p>
+                    <button id="loginBtn" class="btn btn-light btn-lg px-4">
+                        Sign in with Raindrop.io
+                    </button>
+                </div>
+            </div>
             <div id="error" class="alert alert-danger d-none"></div>
             <div id="bookmarks" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4"></div>
         </main>
     </div>
-
-    <template id="login-template">
-        <div class="col-12">
-            <div class="text-center py-5">
-                <p class="mb-4 opacity-75">Sign in with Raindrop.io to see your bookmarks</p>
-                <button id="loginBtn" class="btn btn-light btn-lg px-4">
-                    Sign in with Raindrop.io
-                </button>
-            </div>
-        </div>
-    </template>
 
     <!-- Templates -->
     <template id="bookmark-template">
@@ -47,7 +44,7 @@
 
     <template id="empty-template">
         <div class="col-12">
-            <p class="text-white text-center">No bookmarks found.</p>
+            <p class="text-center">No bookmarks found.</p>
         </div>
     </template>
 
