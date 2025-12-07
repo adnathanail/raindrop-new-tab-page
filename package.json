@@ -3,5 +3,12 @@
   "version": "0.1.0",
   "description": "A nice new tab page, pulling bookmarks from Raindrop.io",
   "license": "MIT",
-  "author": "Alex Nathanail"
+  "author": "Alex Nathanail",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step needed'"
+  },
+  "devDependencies": {
+    "netlify-cli": "23.12.3"
+  }
 }
