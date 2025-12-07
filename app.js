@@ -17,7 +17,7 @@ function setupSearch() {
             let url = query;
             // Add protocol if missing
             if (!url.match(/^https?:\/\//i)) {
-                url = 'https://' + url;
+                url = `https://${url}`;
             }
             window.location.href = url;
         } else {
@@ -97,11 +97,13 @@ function showLoginPrompt() {
 
 function renderFolders(folders) {
     const bookmarksEl = document.getElementById('bookmarks');
-    bookmarksEl.innerHTML = '';
 
     if (folders.length === 0) {
+        bookmarksEl.querySelector("div").classList.remove("d-none");
         return;
     }
+
+    bookmarksEl.innerHTML = '';
 
     folders.forEach(folder => {
         const template = document.getElementById('folder-template');
