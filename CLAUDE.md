@@ -12,10 +12,12 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Template-based rendering for bookmarks and folders
   - Service worker registration for PWA functionality
 
-- **app.js**: Client-side JavaScript (not in repo files shown, but referenced)
+- **app.js**: Client-side JavaScript
   - Handles bookmark fetching and rendering
   - Manages OAuth flow
-  - Implements search functionality
+  - Implements search functionality with autocomplete
+  - Autocomplete fetches suggestions from "Autocomplete URLs" Raindrop group
+  - Keyboard navigation (arrow keys, Enter, Escape)
 
 - **Service Worker (sw.js)**:
   - Cache name: `raindrop-newtab-v1`
@@ -42,10 +44,25 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - **Returns**: `{ folders: [{ id, title, bookmarks: [...] }] }`
   - **Error handling**: Returns 401 with `needsAuth: true` for auth issues
 
+- **get-autocomplete.js** (`/.netlify/functions/get-autocomplete`):
+  - Fetches autocomplete URL suggestions from Raindrop.io API
+  - Uses OAuth token from `raindrop_token` cookie
+  - Requires `RAINDROP_AUTOCOMPLETE_GROUP_NAME` environment variable
+  - **Flow**: Same as get-bookmarks.js but for autocomplete group
+  - **Returns**: `{ folders: [{ id, title, bookmarks: [...] }] }`
+  - **Error handling**: Returns empty folders array if group doesn't exist
+
+- **lib/raindrop.js**: Shared utility functions for both bookmark functions
+  - Cookie parsing and token extraction
+  - Authentication header creation
+  - Raindrop API calls (user data, collections, bookmarks)
+  - Error response creation
+
 ## Environment Variables
 
 Required environment variables (set in Netlify):
 - `RAINDROP_GROUP_NAME`: Name of the Raindrop.io group to display collections from
+- `RAINDROP_AUTOCOMPLETE_GROUP_NAME`: Name of the Raindrop.io group for autocomplete suggestions
 - OAuth credentials (likely stored in other functions not shown)
 
 ## Authentication Flow

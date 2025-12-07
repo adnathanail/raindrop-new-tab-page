@@ -28,8 +28,19 @@ exports.handler = async function(event) {
         return createAuthErrorResponse();
     }
 
-    // Hardcode the autocomplete group name
-    const AUTOCOMPLETE_GROUP_NAME = 'Autocomplete URLs';
+    // Get name of group to display autocomplete URLs from
+    const AUTOCOMPLETE_GROUP_NAME = process.env.RAINDROP_AUTOCOMPLETE_GROUP_NAME;
+
+    if (!AUTOCOMPLETE_GROUP_NAME) {
+        return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                error: 'RAINDROP_AUTOCOMPLETE_GROUP_NAME not set',
+                needsAuth: true
+            })
+        };
+    }
 
     try {
         const authHeaders = createAuthHeaders(accessToken);
