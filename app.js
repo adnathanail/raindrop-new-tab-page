@@ -91,7 +91,7 @@ function setupAutocomplete() {
 
     // Handle keyboard navigation
     searchInput.addEventListener('keydown', function(e) {
-        if (!dropdown.classList.contains('d-none')) {
+        if (dropdown.classList.contains('show')) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 selectedIndex = Math.min(selectedIndex + 1, filteredSuggestions.length - 1);
@@ -119,37 +119,41 @@ function showAutocomplete(suggestions) {
     dropdown.innerHTML = '';
 
     suggestions.forEach((suggestion, index) => {
-        const item = document.createElement('div');
-        item.className = 'autocomplete-item';
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'dropdown-item';
+        link.href = '#';
         if (index === selectedIndex) {
-            item.classList.add('active');
+            link.classList.add('active');
         }
 
-        item.innerHTML = `
-            <div class="autocomplete-folder">${suggestion.folderTitle}</div>
+        link.innerHTML = `
+            <div class="autocomplete-folder text-muted">${suggestion.folderTitle}</div>
             <div class="autocomplete-item-title">${suggestion.title}</div>
-            <div class="autocomplete-item-url">${suggestion.link}</div>
+            <div class="autocomplete-item-url text-muted">${suggestion.link}</div>
         `;
 
-        item.addEventListener('click', () => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
             navigateToSuggestion(suggestion);
         });
 
+        item.appendChild(link);
         dropdown.appendChild(item);
     });
 
-    dropdown.classList.remove('d-none');
+    dropdown.classList.add('show');
 }
 
 function hideAutocomplete() {
     const dropdown = document.getElementById('autocompleteDropdown');
-    dropdown.classList.add('d-none');
+    dropdown.classList.remove('show');
     selectedIndex = -1;
 }
 
 function updateSelectedItem() {
     const dropdown = document.getElementById('autocompleteDropdown');
-    const items = dropdown.querySelectorAll('.autocomplete-item');
+    const items = dropdown.querySelectorAll('.dropdown-item');
 
     items.forEach((item, index) => {
         if (index === selectedIndex) {
