@@ -1,0 +1,7 @@
+{
+  "name": "raindrop-new-tab-page",
+  "version": "0.1.0",
+  "description": "A nice new tab page, pulling bookmarks from Raindrop.io",
+  "license": "MIT",
+  "author": "Alex Nathanail"
+}
