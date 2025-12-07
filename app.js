@@ -3,7 +3,6 @@
 async function fetchBookmarks() {
     const loadingEl = document.getElementById('loading');
     const errorEl = document.getElementById('error');
-    const bookmarksEl = document.getElementById('bookmarks');
 
     try {
         // Call our Netlify Function
@@ -52,13 +51,12 @@ function showLoginPrompt() {
 
 function renderBookmarks(bookmarks) {
     const bookmarksEl = document.getElementById('bookmarks');
-    bookmarksEl.innerHTML = '';
 
     if (bookmarks.length === 0) {
-        const emptyTemplate = document.getElementById('empty-template');
-        bookmarksEl.appendChild(emptyTemplate.content.cloneNode(true));
         return;
     }
+
+    bookmarksEl.innerHTML = '';
 
     const template = document.getElementById('bookmark-template');
 
