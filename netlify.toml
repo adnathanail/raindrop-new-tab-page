@@ -1,0 +1,23 @@
+# Netlify configuration
+
+[build]
+  # Publish directory (where your static files are)
+  publish = "."
+
+  # Functions directory
+  functions = "netlify/functions"
+
+# Redirect rules (optional, for cleaner URLs)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
