@@ -6,7 +6,10 @@ const {
     createAuthHeaders,
     createResponse,
     createAuthErrorResponse,
-    createTokenExpiredResponse,
+    createTokenExpiredResponse
+} = require('./lib/utils');
+
+const {
     fetchUserData,
     fetchCollectionsMap,
     fetchBookmarksForGroup

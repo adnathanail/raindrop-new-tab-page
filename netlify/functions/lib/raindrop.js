@@ -1,51 +1,4 @@
-// Shared utilities for Raindrop.io API interactions
-
-function parseCookies(cookieHeader) {
-    const cookies = {};
-    if (cookieHeader) {
-        cookieHeader.split(';').forEach(cookie => {
-            const [name, value] = cookie.trim().split('=');
-            cookies[name] = value;
-        });
-    }
-    return cookies;
-}
-
-function getAccessToken(event) {
-    const cookies = parseCookies(event.headers.cookie);
-    return cookies.raindrop_token;
-}
-
-function createAuthHeaders(accessToken) {
-    return {
-        'Authorization': `Bearer ${accessToken}`
-    };
-}
-
-function createResponse(statusCode, body, additionalHeaders = {}) {
-    return {
-        statusCode,
-        headers: {
-            'Content-Type': 'application/json',
-            ...additionalHeaders
-        },
-        body: JSON.stringify(body)
-    };
-}
-
-function createAuthErrorResponse() {
-    return createResponse(401, {
-        error: 'Not authenticated',
-        needsAuth: true
-    });
-}
-
-function createTokenExpiredResponse() {
-    return createResponse(401, {
-        error: 'Token expired or invalid',
-        needsAuth: true
-    });
-}
+// Raindrop.io API-specific utilities
 
 async function fetchUserData(authHeaders) {
     const userResponse = await fetch('https://api.raindrop.io/rest/v1/user', {
@@ -108,12 +61,6 @@ async function fetchBookmarksForGroup(group, collectionsMap, authHeaders) {
 }
 
 module.exports = {
-    parseCookies,
-    getAccessToken,
-    createAuthHeaders,
-    createResponse,
-    createAuthErrorResponse,
-    createTokenExpiredResponse,
     fetchUserData,
     fetchCollectionsMap,
     fetchBookmarksForGroup
