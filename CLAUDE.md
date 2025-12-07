@@ -16,8 +16,9 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Handles bookmark fetching and rendering
   - Manages OAuth flow
   - Implements search functionality with autocomplete
-  - Autocomplete fetches suggestions from "Autocomplete URLs" Raindrop group
+  - Autocomplete searches through both "New Tab" and "Autocomplete URLs" groups
   - Keyboard navigation (arrow keys, Enter, Escape)
+  - Click to reopen autocomplete when refocusing search box
 
 - **Service Worker (sw.js)**:
   - Cache name: `raindrop-newtab-v1`
@@ -32,31 +33,31 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
 ### Backend (Netlify Functions)
 
 - **get-bookmarks.js** (`/.netlify/functions/get-bookmarks`):
-  - Fetches bookmarks from Raindrop.io API
+  - Fetches bookmarks from Raindrop.io API for both display and autocomplete
   - Uses OAuth token from `raindrop_token` cookie
-  - Requires `RAINDROP_GROUP_NAME` environment variable
+  - Requires `RAINDROP_GROUP_NAME` and `RAINDROP_AUTOCOMPLETE_GROUP_NAME` environment variables
   - **Flow**:
     1. Validates OAuth token from cookie
-    2. Fetches user data to find the specified group
+    2. Fetches user data to find both specified groups
     3. Fetches all collections to build a collections map
-    4. Fetches bookmarks for each collection in the group
-    5. Returns folders with bookmarks
-  - **Returns**: `{ folders: [{ id, title, bookmarks: [...] }] }`
+    4. Fetches bookmarks for both groups
+    5. Returns combined data for display and autocomplete
+  - **Returns**:
+    - `display`: Folders from the New Tab group to show on the page
+    - `autocomplete`: Folders from the Autocomplete URLs group only
+    - Frontend combines both for search autocomplete
+    - Format: `{ display: [...], autocomplete: [...] }`
   - **Error handling**: Returns 401 with `needsAuth: true` for auth issues
 
-- **get-autocomplete.js** (`/.netlify/functions/get-autocomplete`):
-  - Fetches autocomplete URL suggestions from Raindrop.io API
-  - Uses OAuth token from `raindrop_token` cookie
-  - Requires `RAINDROP_AUTOCOMPLETE_GROUP_NAME` environment variable
-  - **Flow**: Same as get-bookmarks.js but for autocomplete group
-  - **Returns**: `{ folders: [{ id, title, bookmarks: [...] }] }`
-  - **Error handling**: Returns empty folders array if group doesn't exist
-
-- **lib/raindrop.js**: Shared utility functions for both bookmark functions
+- **lib/utils.js**: General HTTP and Netlify utilities
   - Cookie parsing and token extraction
   - Authentication header creation
+  - HTTP response creation helpers
+  - Error response templates
+
+- **lib/raindrop.js**: Raindrop.io API-specific utilities
   - Raindrop API calls (user data, collections, bookmarks)
-  - Error response creation
+  - Group and collection fetching logic
 
 ## Environment Variables
 

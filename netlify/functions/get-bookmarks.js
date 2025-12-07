@@ -29,12 +29,20 @@ exports.handler = async function(event) {
         return createAuthErrorResponse();
     }
 
-    // Get name of group to display collections for
-    const GROUP_NAME = process.env.RAINDROP_GROUP_NAME;
+    // Get names of groups to fetch
+    const NEW_TAB_GROUP_NAME = process.env.RAINDROP_GROUP_NAME;
+    const AUTOCOMPLETE_GROUP_NAME = process.env.RAINDROP_AUTOCOMPLETE_GROUP_NAME;
 
-    if (!GROUP_NAME) {
+    if (!NEW_TAB_GROUP_NAME) {
         return createResponse(500, {
             error: 'RAINDROP_GROUP_NAME not set',
+            needsAuth: true
+        });
+    }
+
+    if (!AUTOCOMPLETE_GROUP_NAME) {
+        return createResponse(500, {
+            error: 'RAINDROP_AUTOCOMPLETE_GROUP_NAME not set',
             needsAuth: true
         });
     }
@@ -53,23 +61,30 @@ exports.handler = async function(event) {
             throw error;
         }
 
-        const newTabGroup = userData.user.groups?.find(g => g.title === GROUP_NAME);
+        const newTabGroup = userData.user.groups?.find(g => g.title === NEW_TAB_GROUP_NAME);
+        const autocompleteGroup = userData.user.groups?.find(g => g.title === AUTOCOMPLETE_GROUP_NAME);
 
         if (!newTabGroup) {
-            throw new Error(`No group found called '${GROUP_NAME}'`);
+            throw new Error(`No group found called '${NEW_TAB_GROUP_NAME}'`);
         }
 
         if (!newTabGroup.collections || newTabGroup.collections.length === 0) {
-            throw new Error(`${GROUP_NAME} group contains no collections`);
+            throw new Error(`${NEW_TAB_GROUP_NAME} group contains no collections`);
         }
 
         // Step 2: Fetch all collections to get their titles
         const collectionsMap = await fetchCollectionsMap(authHeaders);
 
-        // Step 3: Fetch bookmarks for each collection in the group
-        const foldersWithBookmarks = await fetchBookmarksForGroup(newTabGroup, collectionsMap, authHeaders);
+        // Step 3: Fetch bookmarks for both groups
+        const newTabFolders = await fetchBookmarksForGroup(newTabGroup, collectionsMap, authHeaders);
+        const autocompleteFolders = autocompleteGroup
+            ? await fetchBookmarksForGroup(autocompleteGroup, collectionsMap, authHeaders)
+            : [];
 
-        return createResponse(200, { folders: foldersWithBookmarks }, { 'Cache-Control': 'private, max-age=300' });
+        return createResponse(200, {
+            display: newTabFolders,
+            autocomplete: autocompleteFolders
+        }, { 'Cache-Control': 'private, max-age=300' });
 
     } catch (error) {
         console.error('Error fetching bookmarks:', error);

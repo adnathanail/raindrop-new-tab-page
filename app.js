@@ -53,9 +53,6 @@ function setupAutocomplete() {
     const searchInput = document.getElementById('searchInput');
     const dropdown = document.getElementById('autocompleteDropdown');
 
-    // Fetch autocomplete data
-    fetchAutocompleteData();
-
     // Handle input changes
     searchInput.addEventListener('input', function(e) {
         const query = e.target.value.trim().toLowerCase();
@@ -181,19 +178,6 @@ function updateSelectedItem() {
     });
 }
 
-async function fetchAutocompleteData() {
-    try {
-        const response = await fetch('/.netlify/functions/get-autocomplete');
-
-        if (response.ok) {
-            const data = await response.json();
-            autocompleteData = data.folders || [];
-        }
-    } catch (error) {
-        console.error('Error fetching autocomplete data:', error);
-        // Silently fail - autocomplete just won't work
-    }
-}
 
 // Check if string looks like a URL
 function isURL(str) {
@@ -240,8 +224,11 @@ async function fetchBookmarks() {
         // Hide loading
         loadingEl.classList.add('d-none');
 
-        // Display folders with bookmarks
-        renderFolders(data.folders || []);
+        // Display folders with bookmarks on the page
+        renderFolders(data.display || []);
+
+        // Store autocomplete data (combine display and autocomplete groups)
+        autocompleteData = [...(data.display || []), ...(data.autocomplete || [])];
 
     } catch (error) {
         console.error('Error fetching bookmarks:', error);
