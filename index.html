@@ -123,8 +123,8 @@
     <script src="app.js"></script>
     
     <script>
-        // Register Service Worker for PWA
-        if ('serviceWorker' in navigator) {
+        // Register Service Worker for PWA (disabled on localhost)
+        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
             navigator.serviceWorker.register('sw.js')
                 .then(registration => {
                     console.log('Service Worker registered successfully:', registration);
@@ -132,6 +132,8 @@
                 .catch(error => {
                     console.log('Service Worker registration failed:', error);
                 });
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('Service Worker registration skipped on localhost');
         }
     </script>
 </body>
