@@ -198,9 +198,82 @@ function isURL(str) {
     return domainWithPathPattern.test(str);
 }
 
+// UI state management
+function showLoadingSpinner() {
+    const spinner = document.getElementById('loadingSpinner');
+    const checkmark = document.getElementById('loadingCheckmark');
+    spinner.classList.remove('d-none');
+    checkmark.classList.add('d-none');
+}
+
+function showLoadingCheckmark() {
+    const spinner = document.getElementById('loadingSpinner');
+    const checkmark = document.getElementById('loadingCheckmark');
+    spinner.classList.add('d-none');
+    checkmark.classList.remove('d-none');
+
+    // Hide checkmark after 2 seconds
+    setTimeout(() => {
+        checkmark.classList.add('d-none');
+    }, 2000);
+}
+
+function hideLoadingIndicators() {
+    const spinner = document.getElementById('loadingSpinner');
+    const checkmark = document.getElementById('loadingCheckmark');
+    spinner.classList.add('d-none');
+    checkmark.classList.add('d-none');
+}
+
+// localStorage cache management
+const CACHE_KEY = 'raindrop_bookmarks_cache';
+
+function loadFromCache() {
+    try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+    } catch (error) {
+        console.error('Error loading from cache:', error);
+    }
+    return null;
+}
+
+function saveToCache(data) {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    } catch (error) {
+        console.error('Error saving to cache:', error);
+    }
+}
+
+function renderBookmarksData(data) {
+    const loadingEl = document.getElementById('loading');
+
+    // Hide loading
+    loadingEl.classList.add('d-none');
+
+    // Display folders with bookmarks on the page
+    renderFolders(data.display || []);
+
+    // Store autocomplete data (combine display and autocomplete groups)
+    autocompleteData = [...(data.display || []), ...(data.autocomplete || [])];
+}
+
 async function fetchBookmarks() {
     const loadingEl = document.getElementById('loading');
     const errorEl = document.getElementById('error');
+
+    // Try to load from cache first
+    const cachedData = loadFromCache();
+    if (cachedData) {
+        console.log('Loading bookmarks from cache');
+        renderBookmarksData(cachedData);
+    }
+
+    // Fetch fresh data in background
+    showLoadingSpinner();
 
     try {
         // Call our Netlify Function
@@ -210,6 +283,7 @@ async function fetchBookmarks() {
         if (response.status === 401) {
             const data = await response.json();
             if (data.needsAuth) {
+                hideLoadingIndicators();
                 showLoginPrompt();
                 return;
             }
@@ -221,20 +295,25 @@ async function fetchBookmarks() {
 
         const data = await response.json();
 
-        // Hide loading
-        loadingEl.classList.add('d-none');
+        // Save to cache
+        saveToCache(data);
 
-        // Display folders with bookmarks on the page
-        renderFolders(data.display || []);
+        // Update the UI with fresh data
+        renderBookmarksData(data);
 
-        // Store autocomplete data (combine display and autocomplete groups)
-        autocompleteData = [...(data.display || []), ...(data.autocomplete || [])];
+        // Show checkmark
+        showLoadingCheckmark();
 
     } catch (error) {
         console.error('Error fetching bookmarks:', error);
-        loadingEl.classList.add('d-none');
-        errorEl.textContent = `Error: ${error.message}`;
-        errorEl.classList.remove('d-none');
+        hideLoadingIndicators();
+
+        // Only show error if we didn't have cached data
+        if (!cachedData) {
+            loadingEl.classList.add('d-none');
+            errorEl.textContent = `Error: ${error.message}`;
+            errorEl.classList.remove('d-none');
+        }
     }
 }
 
