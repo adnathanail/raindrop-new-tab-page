@@ -99,11 +99,11 @@ function setupAutocomplete() {
         if (dropdown.classList.contains('show')) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                selectedIndex = Math.min(selectedIndex + 1, filteredSuggestions.length - 1);
+                selectedIndex = selectedIndex === filteredSuggestions.length - 1 ? 0 : selectedIndex + 1;
                 updateSelectedItem();
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                selectedIndex = Math.max(selectedIndex - 1, 0);
+                selectedIndex = selectedIndex === 0 ? filteredSuggestions.length - 1 : selectedIndex - 1;
                 updateSelectedItem();
             } else if (e.key === 'Enter') {
                 // If there's a selected autocomplete item, navigate to it
