@@ -28,9 +28,11 @@ exports.handler = async function(event, context) {
     }
 
     // Build GitHub OAuth authorization URL
+    // 'repo' scope is required to list private repos in addition to public ones
     const authUrl = new URL('https://github.com/login/oauth/authorize');
     authUrl.searchParams.set('client_id', CLIENT_ID);
     authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+    authUrl.searchParams.set('scope', 'repo');
 
     const html = renderTemplate('redirect', {
         REDIRECT_URL: authUrl.toString(),

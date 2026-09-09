@@ -68,7 +68,7 @@
                         <!-- GitHub repo search: right of main search on desktop, below it on mobile -->
                         <div class="col-12 col-lg-5">
                             <form id="githubSearchForm">
-                                <div class="input-group">
+                                <div class="input-group position-relative">
                                     <span class="input-group-text rounded-0"><i class="fa-brands fa-github"></i></span>
                                     <input
                                         type="text"
@@ -79,6 +79,7 @@
                                         autocomplete="off"
                                     >
                                     <button id="githubSearchBtn" class="btn btn-secondary" type="submit">Go</button>
+                                    <ul id="githubAutocompleteDropdown" class="dropdown-menu rounded-0 autocomplete-dropdown"></ul>
                                 </div>
                             </form>
                         </div>
