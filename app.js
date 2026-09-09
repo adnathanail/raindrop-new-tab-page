@@ -190,8 +190,20 @@ function setupSearch() {
     });
 }
 
-// GitHub repo search: disables the input and turns the button into a sign-in link when not
-// authed; otherwise loads the user's repos (public + private) and wires up autocomplete.
+// Hides the GitHub search column entirely and lets the main search bar fill the row
+function hideGithubSearch() {
+    let githubSearchCol = document.getElementById('githubSearchCol');
+    let mainSearchCol = document.getElementById('mainSearchCol');
+    githubSearchCol.classList.add('d-none');
+    mainSearchCol.classList.remove('col-lg-7');
+    mainSearchCol.classList.add('col-lg-8')
+    mainSearchCol.classList.add('offset-lg-2');
+}
+
+// GitHub repo search: hidden entirely when GitHub OAuth isn't configured (no client
+// id/secret/redirect URI env vars); otherwise disables the input and turns the button into a
+// sign-in link when not authed, or loads the user's repos (public + private) and wires up
+// autocomplete when authed.
 async function setupGithubSearch() {
     const searchForm = document.getElementById('githubSearchForm');
     const searchInput = document.getElementById('githubSearchInput');
@@ -289,7 +301,9 @@ async function setupGithubSearch() {
         const response = await fetch('/.netlify/functions/github-auth-status');
         const data = await response.json();
 
-        if (data.authed) {
+        if (!data.configured) {
+            hideGithubSearch();
+        } else if (data.authed) {
             await showSignedInState();
         } else {
             showSignedOutState();

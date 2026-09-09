@@ -1,4 +1,4 @@
-// Reports whether the visitor has a GitHub auth cookie set
+// Reports whether GitHub OAuth is configured, and whether the visitor has a GitHub auth cookie set
 const { getGithubAccessToken, createResponse } = require('./lib/utils');
 
 exports.handler = async function(event) {
@@ -6,7 +6,13 @@ exports.handler = async function(event) {
         return createResponse(405, { error: 'Method not allowed' });
     }
 
+    const configured = !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET && process.env.GITHUB_REDIRECT_URI);
+
+    if (!configured) {
+        return createResponse(200, { configured: false, authed: false });
+    }
+
     const accessToken = getGithubAccessToken(event);
 
-    return createResponse(200, { authed: !!accessToken });
+    return createResponse(200, { configured: true, authed: !!accessToken });
 };
