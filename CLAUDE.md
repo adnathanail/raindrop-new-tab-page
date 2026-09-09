@@ -24,6 +24,11 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
     repos (public + private, via `/.netlify/functions/get-github-repos`) and filters them
     client-side as you type — same `createAutocomplete()` factory the bookmarks search bar uses,
     parameterized per search box. Selecting a result navigates straight to the repo on GitHub.
+  - When a query matches nothing, two fallback rows show instead (both titled "No repos found"):
+    "Refresh cache" re-fetches the repo list bypassing the server's 5-min HTTP cache (handles a
+    repo added/renamed since the page loaded); "Grant more access" links to
+    `github-manage-access` (see below), for repos missing because an org hasn't approved the
+    OAuth App yet.
 
 - **Service Worker (sw.js)**:
   - Cache name: `raindrop-newtab-v1`

@@ -5,10 +5,11 @@ let autocompleteData = [];
 
 // Generic autocomplete: filters getItems(query) as the user types, renders results into
 // `dropdown` using the shared autocomplete-item-template, and calls onSelect(item) on
-// click/Enter. Returns { getSelected } so a form's submit handler can grab the highlighted item.
-// `noResultsItem`, if given, shows a fallback row ({ fields, onSelect }) when getItems() comes
-// back empty, instead of just hiding the dropdown.
-function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, noResultsItem }) {
+// click/Enter. Returns { getSelected, refresh } — refresh() re-runs the current query, e.g.
+// after the underlying data has been reloaded.
+// `noResultsItems`, if given, is a list of fallback rows ({ fields, onSelect }) shown when
+// getItems() comes back empty, instead of just hiding the dropdown.
+function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, noResultsItems }) {
     const template = document.getElementById('autocomplete-item-template');
     let filtered = [];
     let showingNoResults = false;
@@ -16,7 +17,7 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, no
 
     function activate(item) {
         if (showingNoResults) {
-            noResultsItem.onSelect();
+            item.onSelect();
         } else {
             onSelect(item);
         }
@@ -24,12 +25,13 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, no
 
     function show(items, isNoResults) {
         showingNoResults = isNoResults;
+        filtered = items;
         dropdown.innerHTML = '';
 
         items.forEach((item, index) => {
             const clone = template.content.cloneNode(true);
             const link = clone.querySelector('a');
-            const fields = isNoResults ? noResultsItem.fields : getFields(item);
+            const fields = isNoResults ? item.fields : getFields(item);
 
             clone.querySelector('[data-field="title"]').textContent = fields.title;
             clone.querySelector('[data-field="url"]').textContent = fields.subtitle;
@@ -67,49 +69,47 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, no
         });
     }
 
-    input.addEventListener('input', (e) => {
-        const query = e.target.value.trim().toLowerCase();
-
+    function runQuery(query) {
         if (query.length === 0) {
             hide();
             return;
         }
 
-        filtered = getItems(query);
-        selectedIndex = 0; // Select first item (or the no-results row) by default
+        const items = getItems(query);
+        selectedIndex = 0; // Select first item (or the first no-results row) by default
 
-        if (filtered.length > 0) {
-            show(filtered, false);
-        } else if (noResultsItem) {
-            show([null], true);
+        if (items.length > 0) {
+            show(items, false);
+        } else if (noResultsItems && noResultsItems.length > 0) {
+            show(noResultsItems, true);
         } else {
             hide();
         }
-    });
+    }
+
+    input.addEventListener('input', (e) => runQuery(e.target.value.trim().toLowerCase()));
 
     // Reopen autocomplete if there are suggestions
     input.addEventListener('focus', () => {
         const query = input.value.trim();
-        if (query.length > 0 && (filtered.length > 0 || (showingNoResults && noResultsItem))) {
-            show(showingNoResults ? [null] : filtered, showingNoResults);
+        if (query.length > 0) {
+            runQuery(query.toLowerCase());
         }
     });
 
     input.addEventListener('keydown', (e) => {
         if (!dropdown.classList.contains('show')) return;
 
-        const itemCount = showingNoResults ? 1 : filtered.length;
-
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            selectedIndex = selectedIndex === itemCount - 1 ? 0 : selectedIndex + 1;
+            selectedIndex = selectedIndex === filtered.length - 1 ? 0 : selectedIndex + 1;
             updateSelected();
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            selectedIndex = selectedIndex === 0 ? itemCount - 1 : selectedIndex - 1;
+            selectedIndex = selectedIndex === 0 ? filtered.length - 1 : selectedIndex - 1;
             updateSelected();
         } else if (e.key === 'Enter') {
-            if (selectedIndex >= 0 && selectedIndex < itemCount) {
+            if (selectedIndex >= 0 && selectedIndex < filtered.length) {
                 e.preventDefault();
                 activate(filtered[selectedIndex]);
             }
@@ -126,7 +126,8 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, no
     });
 
     return {
-        getSelected: () => (!showingNoResults && selectedIndex >= 0 && selectedIndex < filtered.length ? filtered[selectedIndex] : null)
+        getSelected: () => (!showingNoResults && selectedIndex >= 0 && selectedIndex < filtered.length ? filtered[selectedIndex] : null),
+        refresh: () => runQuery(input.value.trim().toLowerCase())
     };
 }
 
@@ -205,18 +206,32 @@ async function setupGithubSearch() {
     }
 
     async function showSignedInState() {
-        const response = await fetch('/.netlify/functions/get-github-repos');
-
-        if (response.status === 401) {
-            showSignedOutState();
-            return;
+        function updateRepoCount(count) {
+            document.getElementById('githubSearchIcon').innerHTML = `<i class="fa-brands fa-github"></i> (${count})`;
         }
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch GitHub repos: ${response.statusText}`);
+        // Server response is cached for 5 minutes (see get-github-repos.js); pass
+        // { cache: 'no-store' } to force a fresh fetch, e.g. after adding/renaming a repo.
+        async function loadRepos(fetchOptions) {
+            const response = await fetch('/.netlify/functions/get-github-repos', fetchOptions);
+
+            if (response.status === 401) {
+                showSignedOutState();
+                return null;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch GitHub repos: ${response.statusText}`);
+            }
+
+            const { repos } = await response.json();
+            return repos;
         }
 
-        const { repos } = await response.json();
+        let repos = await loadRepos();
+        if (!repos) return; // showSignedOutState() already ran
+
+        updateRepoCount(repos.length);
 
         const autocomplete = createAutocomplete({
             input: searchInput,
@@ -230,13 +245,26 @@ async function setupGithubSearch() {
                 meta: repo.private ? 'Private' : 'Public'
             }),
             onSelect: (repo) => navigateTo(repo.url),
-            noResultsItem: {
-                fields: { title: 'No repos found', subtitle: 'Grant more access' },
-                // Goes to GitHub's connected-app settings, where org access can be requested.
-                // Re-running the OAuth flow won't help here — GitHub skips the consent screen
-                // once the current scope has already been granted.
-                onSelect: () => { window.location.href = '/.netlify/functions/github-manage-access'; }
-            }
+            noResultsItems: [
+                {
+                    fields: { title: 'Refresh cache', subtitle: 'No repos found' },
+                    onSelect: async () => {
+                        const fresh = await loadRepos({ cache: 'no-store' });
+                        if (fresh) {
+                            repos = fresh;
+                            updateRepoCount(repos.length);
+                            autocomplete.refresh();
+                        }
+                    }
+                },
+                {
+                    fields: { title: 'Grant more access', subtitle: 'No repos found' },
+                    // Goes to GitHub's connected-app settings, where org access can be requested.
+                    // Re-running the OAuth flow won't help here — GitHub skips the consent screen
+                    // once the current scope has already been granted.
+                    onSelect: () => { window.location.href = '/.netlify/functions/github-manage-access'; }
+                }
+            ]
         });
 
         searchForm.addEventListener('submit', function(e) {
