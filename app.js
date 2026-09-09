@@ -195,8 +195,16 @@ async function setupGithubSearch() {
     const searchForm = document.getElementById('githubSearchForm');
     const searchInput = document.getElementById('githubSearchInput');
     const searchBtn = document.getElementById('githubSearchBtn');
+    const searchIcon = document.getElementById('githubSearchIcon');
+
+    function setIconSuffix(suffixHtml) {
+        searchIcon.innerHTML = `<i class="fa-brands fa-github"></i>${suffixHtml ? ` (${suffixHtml})` : ''}`;
+    }
+
+    const SPINNER_HTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
     function showSignedOutState() {
+        setIconSuffix('');
         searchInput.disabled = true;
         searchBtn.type = 'button';
         searchBtn.innerHTML = '<i class="fa-brands fa-github"></i> Sign In';
@@ -206,13 +214,11 @@ async function setupGithubSearch() {
     }
 
     async function showSignedInState() {
-        function updateRepoCount(count) {
-            document.getElementById('githubSearchIcon').innerHTML = `<i class="fa-brands fa-github"></i> (${count})`;
-        }
-
         // Server response is cached for 5 minutes (see get-github-repos.js); pass
         // { cache: 'no-store' } to force a fresh fetch, e.g. after adding/renaming a repo.
         async function loadRepos(fetchOptions) {
+            setIconSuffix(SPINNER_HTML);
+
             const response = await fetch('/.netlify/functions/get-github-repos', fetchOptions);
 
             if (response.status === 401) {
@@ -231,7 +237,7 @@ async function setupGithubSearch() {
         let repos = await loadRepos();
         if (!repos) return; // showSignedOutState() already ran
 
-        updateRepoCount(repos.length);
+        setIconSuffix(String(repos.length));
 
         const autocomplete = createAutocomplete({
             input: searchInput,
@@ -250,11 +256,11 @@ async function setupGithubSearch() {
                     fields: { title: 'Refresh cache', subtitle: 'No repos found' },
                     onSelect: async () => {
                         const fresh = await loadRepos({ cache: 'no-store' });
-                        if (fresh) {
-                            repos = fresh;
-                            updateRepoCount(repos.length);
-                            autocomplete.refresh();
-                        }
+                        if (!fresh) return; // showSignedOutState() already ran
+
+                        repos = fresh;
+                        setIconSuffix(String(repos.length));
+                        autocomplete.refresh();
                     }
                 },
                 {
