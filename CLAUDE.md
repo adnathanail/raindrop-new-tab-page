@@ -119,7 +119,7 @@ Optional (gates the GitHub search bar; omit to leave it showing the sign-in prom
 
 ### CDN Dependencies
 - Bootstrap 5.3.2 (CSS + JS bundle)
-- Font Awesome kit (d8280b97e1)
+- Font Awesome Free 6 (static CSS, via jsDelivr — swapped from the Kit loader to avoid icon flash on load)
 
 ### Backend Dependencies
 - Node.js (for Netlify Functions)

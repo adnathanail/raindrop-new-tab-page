@@ -1,12 +1,12 @@
 // Service Worker for caching static assets
-const CACHE_NAME = 'raindrop-newtab-v1';
+const CACHE_NAME = 'raindrop-newtab-v2';
 const urlsToCache = [
     '/',
     '/index.html',
     '/app.js',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',
-    'https://kit.fontawesome.com/d8280b97e1.js'
+    'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css'
 ];
 
 // Install event - cache all static assets
