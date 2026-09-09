@@ -19,6 +19,9 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Autocomplete searches through both "New Tab" and "Autocomplete URLs" groups
   - Keyboard navigation (arrow keys, Enter, Escape)
   - Click to reopen autocomplete when refocusing search box
+  - GitHub search bar: checks `/.netlify/functions/github-auth-status` on load and swaps the
+    search form for a "Sign in with GitHub" prompt when not authed. Repo search itself (the
+    actual query/results) is not yet implemented — only the auth gate exists so far.
 
 - **Service Worker (sw.js)**:
   - Cache name: `raindrop-newtab-v1`
@@ -59,12 +62,26 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Raindrop API calls (user data, collections, bookmarks)
   - Group and collection fetching logic
 
+- **github-auth-start.js** / **github-auth-callback.js** (`/.netlify/functions/github-auth-*`):
+  - Mirrors the Raindrop OAuth flow (`auth-start.js` / `auth-callback.js`) but for GitHub
+  - Uses `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI` env vars
+  - Callback stores the token in an HttpOnly `github_token` cookie (30 days)
+  - No OAuth scope requested — public repo search doesn't need one
+
+- **github-auth-status.js** (`/.netlify/functions/github-auth-status`):
+  - Lightweight check used by the frontend to gate the GitHub search bar
+  - Returns `{ authed: true/false }` based on presence of the `github_token` cookie only
+    (does not validate the token against the GitHub API)
+
 ## Environment Variables
 
 Required environment variables (set in Netlify):
 - `RAINDROP_GROUP_NAME`: Name of the Raindrop.io group to display collections from
 - `RAINDROP_AUTOCOMPLETE_GROUP_NAME`: Name of the Raindrop.io group for autocomplete suggestions
-- OAuth credentials (likely stored in other functions not shown)
+- `RAINDROP_CLIENT_ID` / `RAINDROP_CLIENT_SECRET` / `RAINDROP_REDIRECT_URI`: Raindrop OAuth app credentials
+
+Optional (gates the GitHub search bar; omit to leave it showing the sign-in prompt):
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `GITHUB_REDIRECT_URI`: GitHub OAuth app credentials
 
 ## Authentication Flow
 
@@ -95,7 +112,10 @@ Required environment variables (set in Netlify):
 ├── netlify.toml           # Netlify configuration
 ├── netlify/
 │   └── functions/
-│       └── get-bookmarks.js  # Fetch bookmarks function
+│       ├── get-bookmarks.js        # Fetch bookmarks function
+│       ├── github-auth-start.js    # Initiates GitHub OAuth flow
+│       ├── github-auth-callback.js # Handles GitHub OAuth callback
+│       └── github-auth-status.js   # Reports whether the GitHub auth cookie is set
 └── CLAUDE.md              # This file
 ```
 
