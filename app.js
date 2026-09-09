@@ -1,14 +1,153 @@
 // Main application logic
 
-// Autocomplete state
+// Bookmarks data, used to build the main search bar's autocomplete suggestions
 let autocompleteData = [];
-let filteredSuggestions = [];
-let selectedIndex = -1;
 
-// Handle search form submission
+// Generic autocomplete: filters getItems(query) as the user types, renders results into
+// `dropdown` using the shared autocomplete-item-template, and calls onSelect(item) on
+// click/Enter. Returns { getSelected } so a form's submit handler can grab the highlighted item.
+function createAutocomplete({ input, dropdown, getItems, getFields, onSelect }) {
+    const template = document.getElementById('autocomplete-item-template');
+    let filtered = [];
+    let selectedIndex = -1;
+
+    function show(items) {
+        dropdown.innerHTML = '';
+
+        items.forEach((item, index) => {
+            const clone = template.content.cloneNode(true);
+            const link = clone.querySelector('a');
+            const fields = getFields(item);
+
+            clone.querySelector('[data-field="title"]').textContent = fields.title;
+            clone.querySelector('[data-field="url"]').textContent = fields.subtitle;
+            clone.querySelector('[data-field="folder"]').textContent = fields.meta;
+
+            if (index === selectedIndex) {
+                link.classList.add('active');
+            }
+
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                onSelect(item);
+            });
+
+            dropdown.appendChild(clone);
+        });
+
+        dropdown.classList.add('show');
+    }
+
+    function hide() {
+        dropdown.classList.remove('show');
+        selectedIndex = -1;
+    }
+
+    function updateSelected() {
+        dropdown.querySelectorAll('.dropdown-item').forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    input.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toLowerCase();
+
+        if (query.length === 0) {
+            hide();
+            return;
+        }
+
+        filtered = getItems(query);
+
+        if (filtered.length > 0) {
+            selectedIndex = 0; // Select first item by default
+            show(filtered);
+        } else {
+            hide();
+        }
+    });
+
+    // Reopen autocomplete if there are suggestions
+    input.addEventListener('focus', () => {
+        const query = input.value.trim();
+        if (query.length > 0 && filtered.length > 0) {
+            show(filtered);
+        }
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (!dropdown.classList.contains('show')) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = selectedIndex === filtered.length - 1 ? 0 : selectedIndex + 1;
+            updateSelected();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = selectedIndex === 0 ? filtered.length - 1 : selectedIndex - 1;
+            updateSelected();
+        } else if (e.key === 'Enter') {
+            if (selectedIndex >= 0 && selectedIndex < filtered.length) {
+                e.preventDefault();
+                onSelect(filtered[selectedIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            hide();
+        }
+    });
+
+    // Click outside to close
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+            hide();
+        }
+    });
+
+    return {
+        getSelected: () => (selectedIndex >= 0 && selectedIndex < filtered.length ? filtered[selectedIndex] : null)
+    };
+}
+
+function navigateTo(url) {
+    if (!url.match(/^https?:\/\//i)) {
+        url = `https://${url}`;
+    }
+    window.location.href = url;
+}
+
+// Handle main search form submission
 function setupSearch() {
     const searchForm = document.getElementById('searchForm');
     const searchInput = document.getElementById('searchInput');
+
+    const autocomplete = createAutocomplete({
+        input: searchInput,
+        dropdown: document.getElementById('autocompleteDropdown'),
+        getItems: (query) => {
+            const results = [];
+            autocompleteData.forEach(folder => {
+                folder.bookmarks.forEach(bookmark => {
+                    const titleMatch = bookmark.title.toLowerCase().includes(query);
+                    const linkMatch = bookmark.link.toLowerCase().includes(query);
+                    if (titleMatch || linkMatch) {
+                        results.push({ ...bookmark, folderTitle: folder.title });
+                    }
+                });
+            });
+            return results;
+        },
+        getFields: (bookmark) => ({
+            title: bookmark.title,
+            subtitle: bookmark.link,
+            meta: bookmark.folderTitle
+        }),
+        onSelect: (bookmark) => navigateTo(bookmark.link)
+    });
 
     searchForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -17,32 +156,25 @@ function setupSearch() {
         if (!query) return;
 
         // If there's a selected autocomplete item, use it
-        if (selectedIndex >= 0 && selectedIndex < filteredSuggestions.length) {
-            navigateToSuggestion(filteredSuggestions[selectedIndex]);
+        const selected = autocomplete.getSelected();
+        if (selected) {
+            navigateTo(selected.link);
             return;
         }
 
-        // Check if input looks like a URL
         if (isURL(query)) {
-            // Redirect to the URL
-            let url = query;
-            // Add protocol if missing
-            if (!url.match(/^https?:\/\//i)) {
-                url = `https://${url}`;
-            }
-            window.location.href = url;
+            navigateTo(query);
         } else {
             // Search Google
             window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
         }
     });
-
-    // Setup autocomplete
-    setupAutocomplete();
 }
 
-// If not authed with GitHub, disable the search input and turn the button into a sign-in link
+// GitHub repo search: disables the input and turns the button into a sign-in link when not
+// authed; otherwise loads the user's repos (public + private) and wires up autocomplete.
 async function setupGithubSearch() {
+    const searchForm = document.getElementById('githubSearchForm');
     const searchInput = document.getElementById('githubSearchInput');
     const searchBtn = document.getElementById('githubSearchBtn');
 
@@ -55,156 +187,57 @@ async function setupGithubSearch() {
         });
     }
 
+    async function showSignedInState() {
+        const response = await fetch('/.netlify/functions/get-github-repos');
+
+        if (response.status === 401) {
+            showSignedOutState();
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch GitHub repos: ${response.statusText}`);
+        }
+
+        const { repos } = await response.json();
+
+        const autocomplete = createAutocomplete({
+            input: searchInput,
+            dropdown: document.getElementById('githubAutocompleteDropdown'),
+            getItems: (query) => repos.filter(repo =>
+                repo.name.toLowerCase().includes(query) || repo.fullName.toLowerCase().includes(query)
+            ),
+            getFields: (repo) => ({
+                title: repo.name,
+                subtitle: repo.fullName,
+                meta: repo.private ? 'Private' : 'Public'
+            }),
+            onSelect: (repo) => navigateTo(repo.url)
+        });
+
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const selected = autocomplete.getSelected();
+            if (selected) {
+                navigateTo(selected.url);
+            }
+        });
+    }
+
     try {
         const response = await fetch('/.netlify/functions/github-auth-status');
         const data = await response.json();
 
-        if (!data.authed) {
+        if (data.authed) {
+            await showSignedInState();
+        } else {
             showSignedOutState();
         }
     } catch (error) {
-        console.error('Error checking GitHub auth status:', error);
+        console.error('Error setting up GitHub search:', error);
         showSignedOutState();
     }
 }
-
-function navigateToSuggestion(suggestion) {
-    let url = suggestion.link;
-    if (!url.match(/^https?:\/\//i)) {
-        url = `https://${url}`;
-    }
-    window.location.href = url;
-}
-
-function setupAutocomplete() {
-    const searchInput = document.getElementById('searchInput');
-    const dropdown = document.getElementById('autocompleteDropdown');
-
-    // Handle input changes
-    searchInput.addEventListener('input', function(e) {
-        const query = e.target.value.trim().toLowerCase();
-
-        if (query.length === 0) {
-            hideAutocomplete();
-            return;
-        }
-
-        // Filter suggestions
-        filteredSuggestions = [];
-        autocompleteData.forEach(folder => {
-            folder.bookmarks.forEach(bookmark => {
-                const titleMatch = bookmark.title.toLowerCase().includes(query);
-                const linkMatch = bookmark.link.toLowerCase().includes(query);
-
-                if (titleMatch || linkMatch) {
-                    filteredSuggestions.push({
-                        ...bookmark,
-                        folderTitle: folder.title
-                    });
-                }
-            });
-        });
-
-        if (filteredSuggestions.length > 0) {
-            selectedIndex = 0; // Select first item by default
-            showAutocomplete(filteredSuggestions);
-        } else {
-            hideAutocomplete();
-        }
-    });
-
-    // Handle focus - reopen autocomplete if there are suggestions
-    searchInput.addEventListener('focus', function(e) {
-        const query = e.target.value.trim();
-        if (query.length > 0 && filteredSuggestions.length > 0) {
-            showAutocomplete(filteredSuggestions);
-        }
-    });
-
-    // Handle keyboard navigation
-    searchInput.addEventListener('keydown', function(e) {
-        if (dropdown.classList.contains('show')) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                selectedIndex = selectedIndex === filteredSuggestions.length - 1 ? 0 : selectedIndex + 1;
-                updateSelectedItem();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedIndex = selectedIndex === 0 ? filteredSuggestions.length - 1 : selectedIndex - 1;
-                updateSelectedItem();
-            } else if (e.key === 'Enter') {
-                // If there's a selected autocomplete item, navigate to it
-                if (selectedIndex >= 0 && selectedIndex < filteredSuggestions.length) {
-                    e.preventDefault();
-                    navigateToSuggestion(filteredSuggestions[selectedIndex]);
-                }
-            } else if (e.key === 'Escape') {
-                hideAutocomplete();
-            }
-        }
-    });
-
-    // Click outside to close
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
-            hideAutocomplete();
-        }
-    });
-}
-
-function showAutocomplete(suggestions) {
-    const dropdown = document.getElementById('autocompleteDropdown');
-    const template = document.getElementById('autocomplete-item-template');
-    dropdown.innerHTML = '';
-
-    suggestions.forEach((suggestion, index) => {
-        const clone = template.content.cloneNode(true);
-
-        // Set the fields
-        const link = clone.querySelector('a');
-        const folderEl = clone.querySelector('[data-field="folder"]');
-        const titleEl = clone.querySelector('[data-field="title"]');
-        const urlEl = clone.querySelector('[data-field="url"]');
-
-        folderEl.textContent = suggestion.folderTitle;
-        titleEl.textContent = suggestion.title;
-        urlEl.textContent = suggestion.link;
-
-        if (index === selectedIndex) {
-            link.classList.add('active');
-        }
-
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            navigateToSuggestion(suggestion);
-        });
-
-        dropdown.appendChild(clone);
-    });
-
-    dropdown.classList.add('show');
-}
-
-function hideAutocomplete() {
-    const dropdown = document.getElementById('autocompleteDropdown');
-    dropdown.classList.remove('show');
-    selectedIndex = -1;
-}
-
-function updateSelectedItem() {
-    const dropdown = document.getElementById('autocompleteDropdown');
-    const items = dropdown.querySelectorAll('.dropdown-item');
-
-    items.forEach((item, index) => {
-        if (index === selectedIndex) {
-            item.classList.add('active');
-            item.scrollIntoView({ block: 'nearest' });
-        } else {
-            item.classList.remove('active');
-        }
-    });
-}
-
 
 // Check if string looks like a URL
 function isURL(str) {

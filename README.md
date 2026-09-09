@@ -47,7 +47,7 @@ RAINDROP_AUTOCOMPLETE_GROUP_NAME=Autocomplete URLs
 
 ### 4. (Optional) Create a GitHub OAuth App
 
-Sign-in gates the GitHub repo search bar; the search functionality itself is still in progress.
+Lets the GitHub search bar search your repos (public + private) by name.
 
 1. Go to [GitHub Settings > Developer settings > OAuth Apps](https://github.com/settings/developers)
 2. Click "New OAuth App"
@@ -115,7 +115,8 @@ npm run deploy
 │       ├── get-bookmarks.js        # Fetches bookmarks with OAuth token
 │       ├── github-auth-start.js    # Initiates GitHub OAuth flow
 │       ├── github-auth-callback.js # Handles GitHub OAuth callback
-│       └── github-auth-status.js   # Reports whether the GitHub auth cookie is set
+│       ├── github-auth-status.js   # Reports whether the GitHub auth cookie is set
+│       └── get-github-repos.js     # Fetches the authenticated user's repos
 ├── netlify.toml            # Netlify configuration
 └── package.json            # Dependencies and scripts
 ```

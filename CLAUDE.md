@@ -19,9 +19,11 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Autocomplete searches through both "New Tab" and "Autocomplete URLs" groups
   - Keyboard navigation (arrow keys, Enter, Escape)
   - Click to reopen autocomplete when refocusing search box
-  - GitHub search bar: checks `/.netlify/functions/github-auth-status` on load and swaps the
-    search form for a "Sign in with GitHub" prompt when not authed. Repo search itself (the
-    actual query/results) is not yet implemented — only the auth gate exists so far.
+  - GitHub search bar: checks `/.netlify/functions/github-auth-status` on load; when not authed,
+    disables the input and turns the button into a "Sign In" link. When authed, loads the user's
+    repos (public + private, via `/.netlify/functions/get-github-repos`) and filters them
+    client-side as you type — same `createAutocomplete()` factory the bookmarks search bar uses,
+    parameterized per search box. Selecting a result navigates straight to the repo on GitHub.
 
 - **Service Worker (sw.js)**:
   - Cache name: `raindrop-newtab-v1`
@@ -66,12 +68,18 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Mirrors the Raindrop OAuth flow (`auth-start.js` / `auth-callback.js`) but for GitHub
   - Uses `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI` env vars
   - Callback stores the token in an HttpOnly `github_token` cookie (30 days)
-  - No OAuth scope requested — public repo search doesn't need one
+  - Requests the `repo` OAuth scope so private repos are included in search
 
 - **github-auth-status.js** (`/.netlify/functions/github-auth-status`):
   - Lightweight check used by the frontend to gate the GitHub search bar
   - Returns `{ authed: true/false }` based on presence of the `github_token` cookie only
     (does not validate the token against the GitHub API)
+
+- **get-github-repos.js** (`/.netlify/functions/get-github-repos`):
+  - Fetches the authenticated user's repos via `GET /user/repos` (owner + collaborator + org,
+    up to 100, sorted by last updated — not paginated further)
+  - Returns `{ repos: [{ name, fullName, url, private, description }] }`
+  - Same 401/`needsAuth` pattern as `get-bookmarks.js`
 
 ## Environment Variables
 
@@ -82,6 +90,7 @@ Required environment variables (set in Netlify):
 
 Optional (gates the GitHub search bar; omit to leave it showing the sign-in prompt):
 - `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `GITHUB_REDIRECT_URI`: GitHub OAuth app credentials
+  (the OAuth app must allow the `repo` scope to search private repos)
 
 ## Authentication Flow
 
