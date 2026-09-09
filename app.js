@@ -127,7 +127,8 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, no
 
     return {
         getSelected: () => (!showingNoResults && selectedIndex >= 0 && selectedIndex < filtered.length ? filtered[selectedIndex] : null),
-        refresh: () => runQuery(input.value.trim().toLowerCase())
+        refresh: () => runQuery(input.value.trim().toLowerCase()),
+        hide
     };
 }
 
@@ -255,6 +256,8 @@ async function setupGithubSearch() {
                 {
                     fields: { title: 'Refresh cache', subtitle: 'No repos found' },
                     onSelect: async () => {
+                        autocomplete.hide();
+
                         const fresh = await loadRepos({ cache: 'no-store' });
                         if (!fresh) return; // showSignedOutState() already ran
 
