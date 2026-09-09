@@ -76,10 +76,17 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
     (does not validate the token against the GitHub API)
 
 - **get-github-repos.js** (`/.netlify/functions/get-github-repos`):
-  - Fetches the authenticated user's repos via `GET /user/repos` (owner + collaborator + org,
-    up to 100, sorted by last updated — not paginated further)
+  - Fetches the authenticated user's repos via `GET /user/repos` (owner + collaborator + org),
+    paginating through all pages (100 per page) until a short page is returned
   - Returns `{ repos: [{ name, fullName, url, private, description }] }`
   - Same 401/`needsAuth` pattern as `get-bookmarks.js`
+
+- **github-manage-access.js** (`/.netlify/functions/github-manage-access`):
+  - Redirects to `https://github.com/settings/connections/applications/{GITHUB_CLIENT_ID}`
+  - This is where org access is actually granted for an OAuth App — re-running `github-auth-start`
+    does NOT show the consent screen again once the current scope is already granted, so it can't
+    be used to pick up newly-visible orgs
+  - Linked from the GitHub search bar's "No repos found — Grant more access" fallback row
 
 ## Environment Variables
 

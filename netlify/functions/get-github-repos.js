@@ -8,6 +8,40 @@ const {
     createTokenExpiredResponse
 } = require('./lib/utils');
 
+const PER_PAGE = 100;
+
+async function fetchAllRepos(accessToken) {
+    const repos = [];
+    let page = 1;
+
+    while (true) {
+        const reposResponse = await fetch(`https://api.github.com/user/repos?per_page=${PER_PAGE}&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github+json',
+                'User-Agent': 'raindrop-new-tab-page'
+            }
+        });
+
+        if (!reposResponse.ok) {
+            if (reposResponse.status === 401) {
+                throw new Error('TOKEN_EXPIRED');
+            }
+            throw new Error(`Failed to fetch repos: ${reposResponse.statusText}`);
+        }
+
+        const pageRepos = await reposResponse.json();
+        repos.push(...pageRepos);
+
+        if (pageRepos.length < PER_PAGE) {
+            break;
+        }
+        page++;
+    }
+
+    return repos;
+}
+
 exports.handler = async function(event) {
     if (event.httpMethod !== 'GET') {
         return createResponse(405, { error: 'Method not allowed' });
@@ -20,22 +54,15 @@ exports.handler = async function(event) {
     }
 
     try {
-        const reposResponse = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Accept': 'application/vnd.github+json',
-                'User-Agent': 'raindrop-new-tab-page'
-            }
-        });
-
-        if (!reposResponse.ok) {
-            if (reposResponse.status === 401) {
+        let repos;
+        try {
+            repos = await fetchAllRepos(accessToken);
+        } catch (error) {
+            if (error.message === 'TOKEN_EXPIRED') {
                 return createTokenExpiredResponse();
             }
-            throw new Error(`Failed to fetch repos: ${reposResponse.statusText}`);
+            throw error;
         }
-
-        const repos = await reposResponse.json();
 
         return createResponse(200, {
             repos: repos.map(repo => ({
