@@ -45,7 +45,24 @@ RAINDROP_GROUP_NAME=New Tab
 RAINDROP_AUTOCOMPLETE_GROUP_NAME=Autocomplete URLs
 ```
 
-### 4. Local Development
+### 4. (Optional) Create a GitHub OAuth App
+
+Sign-in gates the GitHub repo search bar; the search functionality itself is still in progress.
+
+1. Go to [GitHub Settings > Developer settings > OAuth Apps](https://github.com/settings/developers)
+2. Click "New OAuth App"
+3. Under "Authorization callback URL", add:
+   - For local development: `http://localhost:8888/.netlify/functions/github-auth-callback`
+   - For production: `https://your-site.netlify.app/.netlify/functions/github-auth-callback`
+4. Save and copy your Client ID and Client Secret into `.env`:
+
+```
+GITHUB_CLIENT_ID=your_actual_client_id
+GITHUB_CLIENT_SECRET=your_actual_client_secret
+GITHUB_REDIRECT_URI=http://localhost:8888/.netlify/functions/github-auth-callback
+```
+
+### 5. Local Development
 
 Run the local development server with Netlify Functions:
 
@@ -80,6 +97,9 @@ npm run deploy
    - `RAINDROP_REDIRECT_URI` (use your Netlify URL)
    - `RAINDROP_GROUP_NAME` (e.g. `New Tab`)
    - `RAINDROP_AUTOCOMPLETE_GROUP_NAME` (e.g. `Autocomplete URLs`)
+   - `GITHUB_CLIENT_ID` (optional, gates the GitHub search bar)
+   - `GITHUB_CLIENT_SECRET` (optional)
+   - `GITHUB_REDIRECT_URI` (optional, use your Netlify URL)
 7. Deploy!
 
 ## Project Structure
@@ -90,9 +110,12 @@ npm run deploy
 ├── app.js                  # Frontend JavaScript
 ├── netlify/
 │   └── functions/
-│       ├── auth-start.js      # Initiates OAuth flow
-│       ├── auth-callback.js   # Handles OAuth callback
-│       └── get-bookmarks.js   # Fetches bookmarks with OAuth token
+│       ├── auth-start.js           # Initiates Raindrop OAuth flow
+│       ├── auth-callback.js        # Handles Raindrop OAuth callback
+│       ├── get-bookmarks.js        # Fetches bookmarks with OAuth token
+│       ├── github-auth-start.js    # Initiates GitHub OAuth flow
+│       ├── github-auth-callback.js # Handles GitHub OAuth callback
+│       └── github-auth-status.js   # Reports whether the GitHub auth cookie is set
 ├── netlify.toml            # Netlify configuration
 └── package.json            # Dependencies and scripts
 ```

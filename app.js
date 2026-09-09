@@ -41,6 +41,33 @@ function setupSearch() {
     setupAutocomplete();
 }
 
+// If not authed with GitHub, disable the search input and turn the button into a sign-in link
+async function setupGithubSearch() {
+    const searchInput = document.getElementById('githubSearchInput');
+    const searchBtn = document.getElementById('githubSearchBtn');
+
+    function showSignedOutState() {
+        searchInput.disabled = true;
+        searchBtn.type = 'button';
+        searchBtn.innerHTML = '<i class="fa-brands fa-github"></i> Sign In';
+        searchBtn.addEventListener('click', () => {
+            window.location.href = '/.netlify/functions/github-auth-start';
+        });
+    }
+
+    try {
+        const response = await fetch('/.netlify/functions/github-auth-status');
+        const data = await response.json();
+
+        if (!data.authed) {
+            showSignedOutState();
+        }
+    } catch (error) {
+        console.error('Error checking GitHub auth status:', error);
+        showSignedOutState();
+    }
+}
+
 function navigateToSuggestion(suggestion) {
     let url = suggestion.link;
     if (!url.match(/^https?:\/\//i)) {
@@ -388,9 +415,11 @@ function extractDomain(url) {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         setupSearch();
+        setupGithubSearch();
         fetchBookmarks();
     });
 } else {
     setupSearch();
+    setupGithubSearch();
     fetchBookmarks();
 }
