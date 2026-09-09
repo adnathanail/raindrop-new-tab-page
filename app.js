@@ -6,22 +6,34 @@ let autocompleteData = [];
 // Generic autocomplete: filters getItems(query) as the user types, renders results into
 // `dropdown` using the shared autocomplete-item-template, and calls onSelect(item) on
 // click/Enter. Returns { getSelected } so a form's submit handler can grab the highlighted item.
-function createAutocomplete({ input, dropdown, getItems, getFields, onSelect }) {
+// `noResultsItem`, if given, shows a fallback row ({ fields, onSelect }) when getItems() comes
+// back empty, instead of just hiding the dropdown.
+function createAutocomplete({ input, dropdown, getItems, getFields, onSelect, noResultsItem }) {
     const template = document.getElementById('autocomplete-item-template');
     let filtered = [];
+    let showingNoResults = false;
     let selectedIndex = -1;
 
-    function show(items) {
+    function activate(item) {
+        if (showingNoResults) {
+            noResultsItem.onSelect();
+        } else {
+            onSelect(item);
+        }
+    }
+
+    function show(items, isNoResults) {
+        showingNoResults = isNoResults;
         dropdown.innerHTML = '';
 
         items.forEach((item, index) => {
             const clone = template.content.cloneNode(true);
             const link = clone.querySelector('a');
-            const fields = getFields(item);
+            const fields = isNoResults ? noResultsItem.fields : getFields(item);
 
             clone.querySelector('[data-field="title"]').textContent = fields.title;
             clone.querySelector('[data-field="url"]').textContent = fields.subtitle;
-            clone.querySelector('[data-field="folder"]').textContent = fields.meta;
+            clone.querySelector('[data-field="folder"]').textContent = fields.meta || '';
 
             if (index === selectedIndex) {
                 link.classList.add('active');
@@ -29,7 +41,7 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect }) 
 
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                onSelect(item);
+                activate(item);
             });
 
             dropdown.appendChild(clone);
@@ -40,6 +52,7 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect }) 
 
     function hide() {
         dropdown.classList.remove('show');
+        showingNoResults = false;
         selectedIndex = -1;
     }
 
@@ -63,10 +76,12 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect }) 
         }
 
         filtered = getItems(query);
+        selectedIndex = 0; // Select first item (or the no-results row) by default
 
         if (filtered.length > 0) {
-            selectedIndex = 0; // Select first item by default
-            show(filtered);
+            show(filtered, false);
+        } else if (noResultsItem) {
+            show([null], true);
         } else {
             hide();
         }
@@ -75,26 +90,28 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect }) 
     // Reopen autocomplete if there are suggestions
     input.addEventListener('focus', () => {
         const query = input.value.trim();
-        if (query.length > 0 && filtered.length > 0) {
-            show(filtered);
+        if (query.length > 0 && (filtered.length > 0 || (showingNoResults && noResultsItem))) {
+            show(showingNoResults ? [null] : filtered, showingNoResults);
         }
     });
 
     input.addEventListener('keydown', (e) => {
         if (!dropdown.classList.contains('show')) return;
 
+        const itemCount = showingNoResults ? 1 : filtered.length;
+
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            selectedIndex = selectedIndex === filtered.length - 1 ? 0 : selectedIndex + 1;
+            selectedIndex = selectedIndex === itemCount - 1 ? 0 : selectedIndex + 1;
             updateSelected();
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            selectedIndex = selectedIndex === 0 ? filtered.length - 1 : selectedIndex - 1;
+            selectedIndex = selectedIndex === 0 ? itemCount - 1 : selectedIndex - 1;
             updateSelected();
         } else if (e.key === 'Enter') {
-            if (selectedIndex >= 0 && selectedIndex < filtered.length) {
+            if (selectedIndex >= 0 && selectedIndex < itemCount) {
                 e.preventDefault();
-                onSelect(filtered[selectedIndex]);
+                activate(filtered[selectedIndex]);
             }
         } else if (e.key === 'Escape') {
             hide();
@@ -109,7 +126,7 @@ function createAutocomplete({ input, dropdown, getItems, getFields, onSelect }) 
     });
 
     return {
-        getSelected: () => (selectedIndex >= 0 && selectedIndex < filtered.length ? filtered[selectedIndex] : null)
+        getSelected: () => (!showingNoResults && selectedIndex >= 0 && selectedIndex < filtered.length ? filtered[selectedIndex] : null)
     };
 }
 
@@ -212,7 +229,12 @@ async function setupGithubSearch() {
                 subtitle: repo.fullName,
                 meta: repo.private ? 'Private' : 'Public'
             }),
-            onSelect: (repo) => navigateTo(repo.url)
+            onSelect: (repo) => navigateTo(repo.url),
+            noResultsItem: {
+                fields: { title: 'No repos found', subtitle: 'Grant more access' },
+                // Re-opens the GitHub OAuth consent screen, where org access can be requested
+                onSelect: () => { window.location.href = '/.netlify/functions/github-auth-start'; }
+            }
         });
 
         searchForm.addEventListener('submit', function(e) {
