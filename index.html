@@ -34,7 +34,7 @@
         <header class="mb-5">
             <div class="row align-items-center g-3">
                 <!-- Left: Title (order-1 on mobile) -->
-                <div class="col-12 col-lg-2 order-1 order-lg-1 text-center text-lg-start">
+                <div class="col-12 col-lg-auto order-1 order-lg-1 text-center text-lg-start">
                     <h1 class="h3 mb-0">
                         New tab
                         <i id="loadingSpinner" class="fa-solid fa-spinner fa-spin ms-2 d-none"></i>
@@ -43,10 +43,10 @@
                 </div>
 
                 <!-- Middle: Search bars (order-3 on mobile, order-2 on desktop) -->
-                <div class="col-12 col-lg-8 order-3 order-lg-2">
+                <div class="col-12 col-lg order-3 order-lg-2">
                     <div class="row g-2">
                         <!-- Main search (a bit left of center on desktop) -->
-                        <div class="col-12 col-lg-8">
+                        <div class="col-12 col-lg-7">
                             <form id="searchForm">
                                 <div class="input-group position-relative">
                                     <span class="input-group-text rounded-0"><i class="fa-brands fa-google"></i> / <i class="fa-solid fa-globe"></i></span>
@@ -66,7 +66,7 @@
                         </div>
 
                         <!-- GitHub repo search: right of main search on desktop, below it on mobile -->
-                        <div class="col-12 col-lg-4">
+                        <div class="col-12 col-lg-5">
                             <form id="githubSearchForm">
                                 <div class="input-group">
                                     <span class="input-group-text rounded-0"><i class="fa-brands fa-github"></i></span>
@@ -78,7 +78,7 @@
                                         placeholder="Search GitHub repos..."
                                         autocomplete="off"
                                     >
-                                    <button class="btn btn-primary" type="submit">Go</button>
+                                    <button class="btn btn-secondary" type="submit">Go</button>
                                 </div>
                             </form>
                         </div>
@@ -86,7 +86,7 @@
                 </div>
 
                 <!-- Right: Credits (order-2 on mobile, order-3 on desktop) -->
-                <div class="col-12 col-lg-2 order-2 order-lg-3 text-center text-lg-end">
+                <div class="col-12 col-lg-auto order-2 order-lg-3 text-center text-lg-end">
                     <small class="d-block opacity-75">Powered by <a href="http://raindrop.io">Raindrop.io</a></small>
                     <small class="d-block opacity-75">Made with ❤️ by <a href="http://github.com/adnathanail/">Alex Nathanail</a></small>
                 </div>
