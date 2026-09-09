@@ -232,8 +232,10 @@ async function setupGithubSearch() {
             onSelect: (repo) => navigateTo(repo.url),
             noResultsItem: {
                 fields: { title: 'No repos found', subtitle: 'Grant more access' },
-                // Re-opens the GitHub OAuth consent screen, where org access can be requested
-                onSelect: () => { window.location.href = '/.netlify/functions/github-auth-start'; }
+                // Goes to GitHub's connected-app settings, where org access can be requested.
+                // Re-running the OAuth flow won't help here — GitHub skips the consent screen
+                // once the current scope has already been granted.
+                onSelect: () => { window.location.href = '/.netlify/functions/github-manage-access'; }
             }
         });
 
