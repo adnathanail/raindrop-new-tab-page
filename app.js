@@ -416,7 +416,18 @@ function showLoadingCheckmark() {
 function showLoadingRefreshIcon() {
     document.getElementById('loadingSpinner').classList.add('d-none');
     document.getElementById('loadingCheckmark').classList.add('d-none');
+    document.getElementById('loadingRefresh').classList.remove('d-none', 'opacity-50', 'pe-none');
+}
+
+// Shown instead of hiding the refresh icon entirely when there's nothing to refresh yet (e.g.
+// not signed in to Raindrop). Keeps its width reserved in the header so signing in doesn't make
+// the header suddenly grow once bookmarks load and the icon becomes clickable.
+function showLoadingRefreshDisabled() {
+    clearTimeout(loadingRefreshTimeout);
+    document.getElementById('loadingSpinner').classList.add('d-none');
+    document.getElementById('loadingCheckmark').classList.add('d-none');
     document.getElementById('loadingRefresh').classList.remove('d-none');
+    document.getElementById('loadingRefresh').classList.add('opacity-50', 'pe-none');
 }
 
 function hideLoadingIndicators() {
@@ -497,7 +508,7 @@ async function fetchBookmarks({ forceRefresh = false } = {}) {
         if (response.status === 401) {
             const data = await response.json();
             if (data.needsAuth) {
-                hideLoadingIndicators();
+                showLoadingRefreshDisabled();
                 showLoginPrompt();
                 return;
             }
