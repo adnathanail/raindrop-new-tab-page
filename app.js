@@ -200,10 +200,24 @@ function hideGithubSearch() {
     mainSearchCol.classList.add('offset-lg-2');
 }
 
+// Reverses hideGithubSearch(). Both are idempotent, so callers can apply either one
+// without checking the current state first.
+function showGithubSearch() {
+    let githubSearchCol = document.getElementById('githubSearchCol');
+    let mainSearchCol = document.getElementById('mainSearchCol');
+    githubSearchCol.classList.remove('d-none');
+    mainSearchCol.classList.remove('col-lg-8', 'offset-lg-2');
+    mainSearchCol.classList.add('col-lg-7');
+}
+
 // GitHub repo search: hidden entirely when GitHub OAuth isn't configured (no client
 // id/secret/redirect URI env vars); otherwise disables the input and turns the button into a
 // sign-in link when not authed, or loads the user's repos (public + private) and wires up
 // autocomplete when authed.
+//
+// Both the auth status and the repo list are cached in localStorage (mirroring the bookmarks
+// cache-first pattern) so returning visits render the correct column/state instantly instead of
+// flashing while the status/repos requests are in flight, then revalidate in the background.
 async function setupGithubSearch() {
     const searchForm = document.getElementById('githubSearchForm');
     const searchInput = document.getElementById('githubSearchInput');
@@ -221,38 +235,38 @@ async function setupGithubSearch() {
         searchInput.disabled = true;
         searchBtn.type = 'button';
         searchBtn.innerHTML = '<i class="fa-brands fa-github"></i> Sign In';
-        searchBtn.addEventListener('click', () => {
+        // Assigned rather than addEventListener'd, since showSignedOutState() can be called
+        // more than once (cache render, then live revalidation).
+        searchBtn.onclick = () => {
             window.location.href = '/.netlify/functions/github-auth-start';
-        });
+        };
     }
 
-    async function showSignedInState() {
-        // Server response is cached for 5 minutes (see get-github-repos.js); pass
-        // { cache: 'no-store' } to force a fresh fetch, e.g. after adding/renaming a repo.
-        async function loadRepos(fetchOptions) {
-            setIconSuffix(SPINNER_HTML);
+    let repos = null;
+    let autocomplete = null;
 
-            const response = await fetch('/.netlify/functions/get-github-repos', fetchOptions);
+    // Server response is cached for 5 minutes (see get-github-repos.js); pass
+    // { cache: 'no-store' } to force a fresh fetch, e.g. after adding/renaming a repo.
+    async function loadRepos(fetchOptions) {
+        const response = await fetch('/.netlify/functions/get-github-repos', fetchOptions);
 
-            if (response.status === 401) {
-                showSignedOutState();
-                return null;
-            }
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch GitHub repos: ${response.statusText}`);
-            }
-
-            const { repos } = await response.json();
-            return repos;
+        if (response.status === 401) {
+            showSignedOutState();
+            return null;
         }
 
-        let repos = await loadRepos();
-        if (!repos) return; // showSignedOutState() already ran
+        if (!response.ok) {
+            throw new Error(`Failed to fetch GitHub repos: ${response.statusText}`);
+        }
 
-        setIconSuffix(String(repos.length));
+        const { repos } = await response.json();
+        return repos;
+    }
 
-        const autocomplete = createAutocomplete({
+    function setupAutocompleteOnce() {
+        if (autocomplete) return;
+
+        autocomplete = createAutocomplete({
             input: searchInput,
             dropdown: document.getElementById('githubAutocompleteDropdown'),
             getItems: (query) => repos.filter(repo =>
@@ -269,11 +283,13 @@ async function setupGithubSearch() {
                     fields: { title: 'Refresh cache', subtitle: 'No repos found' },
                     onSelect: async () => {
                         autocomplete.hide();
+                        setIconSuffix(SPINNER_HTML);
 
                         const fresh = await loadRepos({ cache: 'no-store' });
                         if (!fresh) return; // showSignedOutState() already ran
 
                         repos = fresh;
+                        saveToCache(GITHUB_REPOS_CACHE_KEY, repos);
                         setIconSuffix(String(repos.length));
                         autocomplete.refresh();
                     }
@@ -297,20 +313,63 @@ async function setupGithubSearch() {
         });
     }
 
+    // Renders instantly from a cached repo list, if there is one — no spinner, no network wait.
+    function renderSignedInFromCache(cachedRepos) {
+        if (!cachedRepos) return;
+        repos = cachedRepos;
+        setIconSuffix(String(repos.length));
+        setupAutocompleteOnce();
+    }
+
+    // Fetches the live repo list and updates the UI/cache. Called exactly once per page load,
+    // after the auth status has been confirmed live (not from cache) to actually be authed.
+    async function refreshSignedIn() {
+        if (!repos) setIconSuffix(SPINNER_HTML);
+
+        const fresh = await loadRepos();
+        if (!fresh) return; // showSignedOutState() already ran (401)
+
+        repos = fresh;
+        saveToCache(GITHUB_REPOS_CACHE_KEY, repos);
+        setIconSuffix(String(repos.length));
+        setupAutocompleteOnce();
+    }
+
+    // Applies a { configured, authed } status to the column/input/button. Idempotent, so it's
+    // safe to call once from cache and again once the live status comes back.
+    function applyStatus(data) {
+        if (!data.configured) {
+            hideGithubSearch();
+            return;
+        }
+        showGithubSearch();
+        if (!data.authed) {
+            showSignedOutState();
+        }
+    }
+
+    const cachedStatus = loadFromCache(GITHUB_STATUS_CACHE_KEY);
+    const cachedRepos = loadFromCache(GITHUB_REPOS_CACHE_KEY);
+
+    if (cachedStatus) {
+        applyStatus(cachedStatus);
+        if (cachedStatus.configured && cachedStatus.authed) {
+            renderSignedInFromCache(cachedRepos);
+        }
+    }
+
     try {
         const response = await fetch('/.netlify/functions/github-auth-status');
         const data = await response.json();
+        saveToCache(GITHUB_STATUS_CACHE_KEY, data);
 
-        if (!data.configured) {
-            hideGithubSearch();
-        } else if (data.authed) {
-            await showSignedInState();
-        } else {
-            showSignedOutState();
+        applyStatus(data);
+        if (data.configured && data.authed) {
+            await refreshSignedIn();
         }
     } catch (error) {
         console.error('Error setting up GitHub search:', error);
-        showSignedOutState();
+        if (!cachedStatus) showSignedOutState();
     }
 }
 
@@ -377,12 +436,14 @@ function setupBookmarksRefresh() {
     });
 }
 
-// localStorage cache management
-const CACHE_KEY = 'raindrop_bookmarks_cache';
+// localStorage cache management, shared by bookmarks and the GitHub search bar's status/repos
+const BOOKMARKS_CACHE_KEY = 'raindrop_bookmarks_cache';
+const GITHUB_STATUS_CACHE_KEY = 'github_status_cache';
+const GITHUB_REPOS_CACHE_KEY = 'github_repos_cache';
 
-function loadFromCache() {
+function loadFromCache(key) {
     try {
-        const cached = localStorage.getItem(CACHE_KEY);
+        const cached = localStorage.getItem(key);
         if (cached) {
             return JSON.parse(cached);
         }
@@ -392,9 +453,9 @@ function loadFromCache() {
     return null;
 }
 
-function saveToCache(data) {
+function saveToCache(key, data) {
     try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
         console.error('Error saving to cache:', error);
     }
@@ -418,7 +479,7 @@ async function fetchBookmarks({ forceRefresh = false } = {}) {
     const errorEl = document.getElementById('error');
 
     // Try to load from cache first
-    const cachedData = loadFromCache();
+    const cachedData = loadFromCache(BOOKMARKS_CACHE_KEY);
     if (cachedData) {
         console.log('Loading bookmarks from cache');
         renderBookmarksData(cachedData);
@@ -449,7 +510,7 @@ async function fetchBookmarks({ forceRefresh = false } = {}) {
         const data = await response.json();
 
         // Save to cache
-        saveToCache(data);
+        saveToCache(BOOKMARKS_CACHE_KEY, data);
 
         // Update the UI with fresh data
         renderBookmarksData(data);
