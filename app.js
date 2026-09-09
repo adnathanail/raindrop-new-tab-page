@@ -319,31 +319,48 @@ function isURL(str) {
     return domainWithPathPattern.test(str);
 }
 
-// UI state management
+// UI state management: spinner (fetching) -> checkmark (just finished) -> refresh icon (idle,
+// click to manually reload bookmarks bypassing the server cache)
+let loadingRefreshTimeout = null;
+
 function showLoadingSpinner() {
-    const spinner = document.getElementById('loadingSpinner');
-    const checkmark = document.getElementById('loadingCheckmark');
-    spinner.classList.remove('d-none');
-    checkmark.classList.add('d-none');
+    clearTimeout(loadingRefreshTimeout);
+    document.getElementById('loadingSpinner').classList.remove('d-none');
+    document.getElementById('loadingCheckmark').classList.add('d-none');
+    document.getElementById('loadingRefresh').classList.add('d-none');
 }
 
 function showLoadingCheckmark() {
-    const spinner = document.getElementById('loadingSpinner');
-    const checkmark = document.getElementById('loadingCheckmark');
-    spinner.classList.add('d-none');
-    checkmark.classList.remove('d-none');
+    document.getElementById('loadingSpinner').classList.add('d-none');
+    document.getElementById('loadingCheckmark').classList.remove('d-none');
+    document.getElementById('loadingRefresh').classList.add('d-none');
 
-    // Hide checkmark after 2 seconds
-    setTimeout(() => {
-        checkmark.classList.add('d-none');
-    }, 2000);
+    // Settle into a refresh icon after 2 seconds, instead of vanishing
+    clearTimeout(loadingRefreshTimeout);
+    loadingRefreshTimeout = setTimeout(showLoadingRefreshIcon, 2000);
+}
+
+function showLoadingRefreshIcon() {
+    document.getElementById('loadingSpinner').classList.add('d-none');
+    document.getElementById('loadingCheckmark').classList.add('d-none');
+    document.getElementById('loadingRefresh').classList.remove('d-none');
 }
 
 function hideLoadingIndicators() {
-    const spinner = document.getElementById('loadingSpinner');
-    const checkmark = document.getElementById('loadingCheckmark');
-    spinner.classList.add('d-none');
-    checkmark.classList.add('d-none');
+    clearTimeout(loadingRefreshTimeout);
+    document.getElementById('loadingSpinner').classList.add('d-none');
+    document.getElementById('loadingCheckmark').classList.add('d-none');
+    document.getElementById('loadingRefresh').classList.add('d-none');
+}
+
+function setupBookmarksRefresh() {
+    const refreshIcon = document.getElementById('loadingRefresh');
+
+    new bootstrap.Tooltip(refreshIcon);
+
+    refreshIcon.addEventListener('click', () => {
+        fetchBookmarks({ forceRefresh: true });
+    });
 }
 
 // localStorage cache management
@@ -382,7 +399,7 @@ function renderBookmarksData(data) {
     autocompleteData = [...(data.display || []), ...(data.autocomplete || [])];
 }
 
-async function fetchBookmarks() {
+async function fetchBookmarks({ forceRefresh = false } = {}) {
     const loadingEl = document.getElementById('loading');
     const errorEl = document.getElementById('error');
 
@@ -397,8 +414,9 @@ async function fetchBookmarks() {
     showLoadingSpinner();
 
     try {
-        // Call our Netlify Function
-        const response = await fetch('/.netlify/functions/get-bookmarks');
+        // Call our Netlify Function. Server response is cached for 5 minutes (see
+        // get-bookmarks.js); force a real network fetch when manually refreshing.
+        const response = await fetch('/.netlify/functions/get-bookmarks', forceRefresh ? { cache: 'no-store' } : undefined);
 
         // Check if authentication is needed
         if (response.status === 401) {
@@ -510,6 +528,7 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         setupSearch();
         setupGithubSearch();
+        setupBookmarksRefresh();
         fetchBookmarks();
     });
 } else {
