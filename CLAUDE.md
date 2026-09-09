@@ -19,8 +19,10 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Autocomplete searches through both "New Tab" and "Autocomplete URLs" groups
   - Keyboard navigation (arrow keys, Enter, Escape)
   - Click to reopen autocomplete when refocusing search box
-  - GitHub search bar: checks `/.netlify/functions/github-auth-status` on load; when not authed,
-    disables the input and turns the button into a "Sign In" link. When authed, loads the user's
+  - GitHub search bar: checks `/.netlify/functions/github-auth-status` on load. If GitHub OAuth
+    isn't configured (`configured: false` — missing `GITHUB_CLIENT_ID`/`SECRET`/`REDIRECT_URI`),
+    the whole search column is hidden and the main search bar takes the row. Otherwise, when not
+    authed, disables the input and turns the button into a "Sign In" link. When authed, loads the user's
     repos (public + private, via `/.netlify/functions/get-github-repos`) and filters them
     client-side as you type — same `createAutocomplete()` factory the bookmarks search bar uses,
     parameterized per search box. Selecting a result navigates straight to the repo on GitHub.
