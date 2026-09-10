@@ -21,14 +21,19 @@ function getGithubAccessToken(event) {
     return cookies.github_token;
 }
 
+function getGithubRefreshToken(event) {
+    const cookies = parseCookies(event.headers.cookie);
+    return cookies.github_refresh_token;
+}
+
 function createAuthHeaders(accessToken) {
     return {
         'Authorization': `Bearer ${accessToken}`
     };
 }
 
-function createResponse(statusCode, body, additionalHeaders = {}) {
-    return {
+function createResponse(statusCode, body, additionalHeaders = {}, multiValueHeaders = null) {
+    const response = {
         statusCode,
         headers: {
             'Content-Type': 'application/json',
@@ -36,6 +41,12 @@ function createResponse(statusCode, body, additionalHeaders = {}) {
         },
         body: JSON.stringify(body)
     };
+
+    if (multiValueHeaders) {
+        response.multiValueHeaders = multiValueHeaders;
+    }
+
+    return response;
 }
 
 function createAuthErrorResponse() {
@@ -56,6 +67,7 @@ module.exports = {
     parseCookies,
     getAccessToken,
     getGithubAccessToken,
+    getGithubRefreshToken,
     createAuthHeaders,
     createResponse,
     createAuthErrorResponse,

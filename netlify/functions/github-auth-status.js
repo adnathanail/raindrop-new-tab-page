@@ -1,5 +1,5 @@
 // Reports whether GitHub OAuth is configured, and whether the visitor has a GitHub auth cookie set
-const { getGithubAccessToken, createResponse } = require('./lib/utils');
+const { getGithubAccessToken, getGithubRefreshToken, createResponse } = require('./lib/utils');
 
 exports.handler = async function(event) {
     if (event.httpMethod !== 'GET') {
@@ -13,6 +13,7 @@ exports.handler = async function(event) {
     }
 
     const accessToken = getGithubAccessToken(event);
+    const refreshToken = getGithubRefreshToken(event);
 
-    return createResponse(200, { configured: true, authed: !!accessToken });
+    return createResponse(200, { configured: true, authed: !!(accessToken || refreshToken) });
 };

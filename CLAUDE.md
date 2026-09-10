@@ -74,8 +74,20 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
 - **github-auth-start.js** / **github-auth-callback.js** (`/.netlify/functions/github-auth-*`):
   - Mirrors the Raindrop OAuth flow (`auth-start.js` / `auth-callback.js`) but for GitHub
   - Uses `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI` env vars
-  - Callback stores the token in an HttpOnly `github_token` cookie (30 days)
+  - Callback stores the access token in an HttpOnly `github_token` cookie. If the GitHub OAuth
+    App has "Expire user access tokens" enabled, GitHub also returns a `refresh_token` (~6 month
+    lifetime), which is stored in a separate HttpOnly `github_refresh_token` cookie via
+    `lib/github.js`'s `buildGithubCookies()`. Cookie `Max-Age`s are taken from the token
+    response's `expires_in` / `refresh_token_expires_in` when present, falling back to 30 days /
+    ~6 months for non-expiring tokens (the setting disabled)
   - Requests the `repo` OAuth scope so private repos are included in search
+
+- **lib/github.js**: GitHub OAuth-specific utilities
+  - `refreshGithubToken(refreshToken)`: exchanges a refresh token for a new access/refresh token
+    pair via GitHub's `grant_type=refresh_token` flow; throws `REFRESH_FAILED` if the refresh
+    token is invalid/expired/revoked
+  - `buildGithubCookies(tokenData)`: builds the `Set-Cookie` header values for a token response
+    (used by both the OAuth callback and the transparent-refresh path in `get-github-repos.js`)
 
 - **github-auth-status.js** (`/.netlify/functions/github-auth-status`):
   - Lightweight check used by the frontend to gate the GitHub search bar
@@ -86,7 +98,11 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
   - Fetches the authenticated user's repos via `GET /user/repos` (owner + collaborator + org),
     paginating through all pages (100 per page) until a short page is returned
   - Returns `{ repos: [{ name, fullName, url, private, description }] }`
-  - Same 401/`needsAuth` pattern as `get-bookmarks.js`
+  - Same 401/`needsAuth` pattern as `get-bookmarks.js`, but if the access token is missing/expired
+    and a `github_refresh_token` cookie is present, it transparently refreshes via
+    `lib/github.js`'s `refreshGithubToken()`, retries the request, and sets updated cookies on
+    the response (`multiValueHeaders['Set-Cookie']`) — no re-login needed. Falls back to the
+    401/`needsAuth` response only if there's no refresh token or the refresh call itself fails
 
 - **github-manage-access.js** (`/.netlify/functions/github-manage-access`):
   - Redirects to `https://github.com/settings/connections/applications/{GITHUB_CLIENT_ID}`

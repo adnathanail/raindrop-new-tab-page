@@ -3,10 +3,12 @@
 
 const {
     getGithubAccessToken,
+    getGithubRefreshToken,
     createResponse,
     createAuthErrorResponse,
     createTokenExpiredResponse
 } = require('./lib/utils');
+const { refreshGithubToken, buildGithubCookies } = require('./lib/github');
 
 const PER_PAGE = 100;
 
@@ -48,20 +50,40 @@ exports.handler = async function(event) {
     }
 
     const accessToken = getGithubAccessToken(event);
+    const refreshToken = getGithubRefreshToken(event);
 
-    if (!accessToken) {
+    if (!accessToken && !refreshToken) {
         return createAuthErrorResponse();
     }
 
     try {
         let repos;
+        let refreshedCookies = null;
+
         try {
+            if (!accessToken) {
+                throw new Error('TOKEN_EXPIRED');
+            }
             repos = await fetchAllRepos(accessToken);
         } catch (error) {
-            if (error.message === 'TOKEN_EXPIRED') {
+            if (error.message !== 'TOKEN_EXPIRED') {
+                throw error;
+            }
+
+            // Access token missing/expired - try to use the refresh token to get a new one
+            if (!refreshToken) {
                 return createTokenExpiredResponse();
             }
-            throw error;
+
+            let tokenData;
+            try {
+                tokenData = await refreshGithubToken(refreshToken);
+            } catch (refreshError) {
+                return createTokenExpiredResponse();
+            }
+
+            refreshedCookies = buildGithubCookies(tokenData);
+            repos = await fetchAllRepos(tokenData.access_token);
         }
 
         return createResponse(200, {
@@ -72,7 +94,7 @@ exports.handler = async function(event) {
                 private: repo.private,
                 description: repo.description
             }))
-        }, { 'Cache-Control': 'private, max-age=300' });
+        }, { 'Cache-Control': 'private, max-age=300' }, refreshedCookies ? { 'Set-Cookie': refreshedCookies } : null);
 
     } catch (error) {
         console.error('Error fetching GitHub repos:', error);

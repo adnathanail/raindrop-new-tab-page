@@ -1,5 +1,6 @@
 // Handles OAuth callback from GitHub and exchanges code for access token
 const { renderTemplate } = require('./lib/templates');
+const { buildGithubCookies } = require('./lib/github');
 
 exports.handler = async function(event, context) {
     const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
@@ -69,14 +70,12 @@ exports.handler = async function(event, context) {
             throw new Error(tokenData.error_description || tokenData.error);
         }
 
-        const accessToken = tokenData.access_token;
-
-        if (!accessToken) {
+        if (!tokenData.access_token) {
             throw new Error('No access token received');
         }
 
-        // Store the access token in a secure HTTP-only cookie
-        const cookieValue = `github_token=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`; // 30 days
+        // Store the access token (and refresh token, if GitHub issued one) in secure HTTP-only cookies
+        const cookies = buildGithubCookies(tokenData);
 
         const html = renderTemplate('redirect', {
             REDIRECT_URL: '/',
@@ -88,8 +87,10 @@ exports.handler = async function(event, context) {
             statusCode: 200,
             headers: {
                 'Content-Type': 'text/html',
-                'Set-Cookie': cookieValue,
                 'Cache-Control': 'no-cache'
+            },
+            multiValueHeaders: {
+                'Set-Cookie': cookies
             },
             body: html
         };
