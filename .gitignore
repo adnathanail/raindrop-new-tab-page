@@ -6,6 +6,7 @@ node_modules/
 
 # Netlify
 .netlify/
+deno.lock
 
 # OS files
 .DS_Store
