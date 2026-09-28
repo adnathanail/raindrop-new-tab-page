@@ -76,12 +76,24 @@ exports.handler = async function(event) {
             try {
                 tokenData = await refreshRaindropToken(refreshToken);
             } catch (refreshError) {
-                return createTokenExpiredResponse();
+                // Clear the dead refresh token so we don't retry it on every page load
+                const response = createTokenExpiredResponse();
+                response.multiValueHeaders = {
+                    'Set-Cookie': ['raindrop_refresh_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0']
+                };
+                return response;
             }
 
             refreshedCookies = buildRaindropCookies(tokenData);
             authHeaders = createAuthHeaders(tokenData.access_token);
-            userData = await fetchUserData(authHeaders);
+            try {
+                userData = await fetchUserData(authHeaders);
+            } catch (retryError) {
+                if (retryError.message === 'TOKEN_EXPIRED') {
+                    return createTokenExpiredResponse();
+                }
+                throw retryError;
+            }
         }
 
         const newTabGroup = userData.user.groups?.find(g => g.title === NEW_TAB_GROUP_NAME);
