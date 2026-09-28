@@ -3,6 +3,7 @@
 
 const {
     getAccessToken,
+    getRefreshToken,
     createAuthHeaders,
     createResponse,
     createAuthErrorResponse,
@@ -12,7 +13,9 @@ const {
 const {
     fetchUserData,
     fetchCollectionsMap,
-    fetchBookmarksForGroup
+    fetchBookmarksForGroup,
+    refreshRaindropToken,
+    buildRaindropCookies
 } = require('./lib/raindrop');
 
 exports.handler = async function(event) {
@@ -21,11 +24,12 @@ exports.handler = async function(event) {
         return createResponse(405, { error: 'Method not allowed' });
     }
 
-    // Extract access token from cookie
+    // Extract tokens from cookies
     const accessToken = getAccessToken(event);
+    const refreshToken = getRefreshToken(event);
 
     // Check if user is authenticated
-    if (!accessToken) {
+    if (!accessToken && !refreshToken) {
         return createAuthErrorResponse();
     }
 
@@ -48,17 +52,36 @@ exports.handler = async function(event) {
     }
 
     try {
-        const authHeaders = createAuthHeaders(accessToken);
+        let authHeaders = accessToken ? createAuthHeaders(accessToken) : null;
+        let refreshedCookies = null;
 
         // Step 1: Fetch authenticated user to get groups
         let userData;
         try {
+            if (!authHeaders) {
+                throw new Error('TOKEN_EXPIRED');
+            }
             userData = await fetchUserData(authHeaders);
         } catch (error) {
-            if (error.message === 'TOKEN_EXPIRED') {
+            if (error.message !== 'TOKEN_EXPIRED') {
+                throw error;
+            }
+
+            // Access token missing/expired - try to use the refresh token to get a new one
+            if (!refreshToken) {
                 return createTokenExpiredResponse();
             }
-            throw error;
+
+            let tokenData;
+            try {
+                tokenData = await refreshRaindropToken(refreshToken);
+            } catch (refreshError) {
+                return createTokenExpiredResponse();
+            }
+
+            refreshedCookies = buildRaindropCookies(tokenData);
+            authHeaders = createAuthHeaders(tokenData.access_token);
+            userData = await fetchUserData(authHeaders);
         }
 
         const newTabGroup = userData.user.groups?.find(g => g.title === NEW_TAB_GROUP_NAME);
@@ -90,7 +113,7 @@ exports.handler = async function(event) {
         return createResponse(200, {
             display: newTabFolders,
             autocomplete: autocompleteFolders
-        }, { 'Cache-Control': 'private, max-age=300' });
+        }, { 'Cache-Control': 'private, max-age=300' }, refreshedCookies ? { 'Set-Cookie': refreshedCookies } : null);
 
     } catch (error) {
         console.error('Error fetching bookmarks:', error);

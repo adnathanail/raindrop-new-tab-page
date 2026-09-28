@@ -59,7 +59,10 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
     - `autocomplete`: Folders from the Autocomplete URLs group only
     - Frontend combines both for search autocomplete
     - Format: `{ display: [...], autocomplete: [...] }`
-  - **Error handling**: Returns 401 with `needsAuth: true` for auth issues
+  - **Error handling**: Returns 401 with `needsAuth: true` for auth issues. If the access token is
+    missing/expired and a `raindrop_refresh_token` cookie is present, it first transparently
+    refreshes via `lib/raindrop.js`'s `refreshRaindropToken()`, retries, and sets updated cookies
+    on the response (same pattern as `get-github-repos.js`)
 
 - **lib/utils.js**: General HTTP and Netlify utilities
   - Cookie parsing and token extraction
@@ -70,6 +73,12 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
 - **lib/raindrop.js**: Raindrop.io API-specific utilities
   - Raindrop API calls (user data, collections, bookmarks)
   - Group and collection fetching logic
+  - `refreshRaindropToken(refreshToken)`: `grant_type=refresh_token` exchange; throws
+    `REFRESH_FAILED` on failure. Reuses the old refresh token if Raindrop doesn't rotate it
+  - `buildRaindropCookies(tokenData)`: `Set-Cookie` values for `raindrop_token` (Max-Age from
+    `expires_in`, fallback 2 weeks per Raindrop docs), `raindrop_refresh_token` (HttpOnly, 1 year — Raindrop doesn't
+    report its lifetime), and the non-HttpOnly `raindrop_token_expires` debug cookie. Used by
+    `auth-callback.js` and the refresh path in `get-bookmarks.js`
 
 - **github-auth-start.js** / **github-auth-callback.js** (`/.netlify/functions/github-auth-*`):
   - Mirrors the Raindrop OAuth flow (`auth-start.js` / `auth-callback.js`) but for GitHub
@@ -211,9 +220,10 @@ Collections are managed in Raindrop.io. The app automatically displays all colle
 3. Service worker will auto-update on next page load
 
 ### Debugging Auth Issues
-- Hover the refresh icon next to the title to see when the Raindrop token expires. `auth-callback.js`
-  records Raindrop's `expires_in` as epoch ms in a non-HttpOnly `raindrop_token_expires` cookie
-  (shows "unknown" for sessions from before this cookie existed)
+- Hover the refresh icon next to the title to see when the Raindrop access token expires.
+  `buildRaindropCookies()` records Raindrop's `expires_in` as epoch ms in a non-HttpOnly
+  `raindrop_token_expires` cookie (shows "unknown" for sessions from before this cookie existed);
+  it updates whenever the token is transparently refreshed
 - Check browser cookies for `raindrop_token`
 - Verify `RAINDROP_GROUP_NAME` is set in Netlify environment
 - Check Netlify function logs for API errors
