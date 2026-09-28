@@ -78,7 +78,20 @@ exports.handler = async function(event, context) {
         }
 
         // Store the access token in a secure HTTP-only cookie
-        const cookieValue = `raindrop_token=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`; // 30 days
+        const cookieMaxAge = 60 * 60 * 24 * 30; // 30 days
+        const tokenCookie = `raindrop_token=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${cookieMaxAge}`;
+
+        // Record when Raindrop says the token expires (epoch ms) in a non-HttpOnly cookie, so the
+        // frontend can show it for debugging. Browsers don't expose cookie expiry, and the token
+        // cookie is HttpOnly anyway.
+        const expiresAt = tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : '';
+        const expiresCookie = `raindrop_token_expires=${expiresAt}; Path=/; SameSite=Lax; Max-Age=${cookieMaxAge}`;
+
+        console.log('Raindrop token issued:', {
+            expiresIn: tokenData.expires_in,
+            expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+            hasRefreshToken: !!tokenData.refresh_token
+        });
 
         const html = renderTemplate('redirect', {
             REDIRECT_URL: '/',
@@ -90,8 +103,10 @@ exports.handler = async function(event, context) {
             statusCode: 200,
             headers: {
                 'Content-Type': 'text/html',
-                'Set-Cookie': cookieValue,
                 'Cache-Control': 'no-cache'
+            },
+            multiValueHeaders: {
+                'Set-Cookie': [tokenCookie, expiresCookie]
             },
             body: html
         };

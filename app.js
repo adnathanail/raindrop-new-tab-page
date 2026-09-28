@@ -437,10 +437,26 @@ function hideLoadingIndicators() {
     document.getElementById('loadingRefresh').classList.add('d-none');
 }
 
+// Debug info: when the Raindrop token expires, as recorded by auth-callback.js in the
+// `raindrop_token_expires` cookie (epoch ms). Sessions from before that cookie existed have no
+// value, so show "unknown" until the next sign-in.
+function getRaindropTokenExpiryText() {
+    const match = document.cookie.match(/(?:^|;\s*)raindrop_token_expires=(\d+)/);
+    if (!match) {
+        return 'Token expiry: unknown';
+    }
+    const expiresAt = new Date(Number(match[1]));
+    const expired = expiresAt.getTime() < Date.now();
+    return `Token ${expired ? 'expired' : 'expires'}: ${expiresAt.toLocaleString()}`;
+}
+
 function setupBookmarksRefresh() {
     const refreshIcon = document.getElementById('loadingRefresh');
 
-    new bootstrap.Tooltip(refreshIcon);
+    new bootstrap.Tooltip(refreshIcon, {
+        html: true,
+        title: () => `Refresh bookmarks<br><small class="opacity-75">${getRaindropTokenExpiryText()}</small>`
+    });
 
     refreshIcon.addEventListener('click', () => {
         fetchBookmarks({ forceRefresh: true });
