@@ -211,6 +211,9 @@ Collections are managed in Raindrop.io. The app automatically displays all colle
 3. Service worker will auto-update on next page load
 
 ### Debugging Auth Issues
+- Hover the refresh icon next to the title to see when the Raindrop token expires. `auth-callback.js`
+  records Raindrop's `expires_in` as epoch ms in a non-HttpOnly `raindrop_token_expires` cookie
+  (shows "unknown" for sessions from before this cookie existed)
 - Check browser cookies for `raindrop_token`
 - Verify `RAINDROP_GROUP_NAME` is set in Netlify environment
 - Check Netlify function logs for API errors
