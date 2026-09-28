@@ -16,6 +16,11 @@ function getAccessToken(event) {
     return cookies.raindrop_token;
 }
 
+function getRefreshToken(event) {
+    const cookies = parseCookies(event.headers.cookie);
+    return cookies.raindrop_refresh_token;
+}
+
 function getGithubAccessToken(event) {
     const cookies = parseCookies(event.headers.cookie);
     return cookies.github_token;
@@ -66,6 +71,7 @@ function createTokenExpiredResponse() {
 module.exports = {
     parseCookies,
     getAccessToken,
+    getRefreshToken,
     getGithubAccessToken,
     getGithubRefreshToken,
     createAuthHeaders,

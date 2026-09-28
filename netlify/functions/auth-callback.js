@@ -1,5 +1,6 @@
 // Handles OAuth callback from Raindrop.io and exchanges code for access token
 const { renderTemplate } = require('./lib/templates');
+const { buildRaindropCookies } = require('./lib/raindrop');
 
 exports.handler = async function(event, context) {
     const CLIENT_ID = process.env.RAINDROP_CLIENT_ID;
@@ -77,19 +78,8 @@ exports.handler = async function(event, context) {
             throw new Error('No access token received');
         }
 
-        // Store the access token in a secure HTTP-only cookie
-        const cookieMaxAge = 60 * 60 * 24 * 30; // 30 days
-        const tokenCookie = `raindrop_token=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${cookieMaxAge}`;
-
-        // Record when Raindrop says the token expires (epoch ms) in a non-HttpOnly cookie, so the
-        // frontend can show it for debugging. Browsers don't expose cookie expiry, and the token
-        // cookie is HttpOnly anyway.
-        const expiresAt = tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : '';
-        const expiresCookie = `raindrop_token_expires=${expiresAt}; Path=/; SameSite=Lax; Max-Age=${cookieMaxAge}`;
-
         console.log('Raindrop token issued:', {
             expiresIn: tokenData.expires_in,
-            expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
             hasRefreshToken: !!tokenData.refresh_token
         });
 
@@ -106,7 +96,8 @@ exports.handler = async function(event, context) {
                 'Cache-Control': 'no-cache'
             },
             multiValueHeaders: {
-                'Set-Cookie': [tokenCookie, expiresCookie]
+                // Access token, refresh token, and expiry debug cookie
+                'Set-Cookie': buildRaindropCookies(tokenData)
             },
             body: html
         };
