@@ -445,9 +445,25 @@ function getRaindropTokenExpiryText() {
     if (!match) {
         return 'Token expiry: unknown';
     }
-    const expiresAt = new Date(Number(match[1]));
-    const expired = expiresAt.getTime() < Date.now();
-    return `Token ${expired ? 'expired' : 'expires'}: ${expiresAt.toLocaleString()}`;
+    const remainingMs = Number(match[1]) - Date.now();
+    const duration = formatDuration(Math.abs(remainingMs));
+    return remainingMs > 0 ? `Expires in ${duration}` : `Expired ${duration} ago`;
+}
+
+// Formats a duration as e.g. "1d 1h 1m", dropping leading zero units ("1h 0m", "5m")
+function formatDuration(ms) {
+    const totalMinutes = Math.floor(ms / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) {
+        return `${days}d ${hours}h ${minutes}m`;
+    }
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
 }
 
 function setupBookmarksRefresh() {
