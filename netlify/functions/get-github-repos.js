@@ -87,7 +87,7 @@ exports.handler = async function(event) {
         }
 
         return createResponse(200, {
-            repos: repos.map(repo => ({
+            repos: repos.filter(repo => !repo.archived).map(repo => ({
                 name: repo.name,
                 fullName: repo.full_name,
                 url: repo.html_url,

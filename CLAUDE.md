@@ -106,6 +106,7 @@ A Progressive Web App (PWA) that serves as a clean new tab page displaying bookm
 - **get-github-repos.js** (`/.netlify/functions/get-github-repos`):
   - Fetches the authenticated user's repos via `GET /user/repos` (owner + collaborator + org),
     paginating through all pages (100 per page) until a short page is returned
+  - Archived repos are filtered out server-side
   - Returns `{ repos: [{ name, fullName, url, private, description }] }`
   - Same 401/`needsAuth` pattern as `get-bookmarks.js`, but if the access token is missing/expired
     and a `github_refresh_token` cookie is present, it transparently refreshes via
